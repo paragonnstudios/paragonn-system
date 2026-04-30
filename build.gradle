@@ -1,0 +1,67 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.0'
+}
+
+group = 'studios.paragonn.system'
+version = '1.14.19'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['main/java/src']
+        }
+        resources {
+            srcDirs = ['main/resources']
+        }
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
+    maven { url = "https://repo.codemc.io/repository/maven-public/" }
+    maven { url = "https://jitpack.io" }
+    maven { url = "https://repo.extendedclip.com/content/repositories/placeholderapi/" }
+    maven { url = "https://libraries.minecraft.net/" }
+    maven { url = "https://nexus.hc.to/content/repositories/pub_releases" }
+}
+
+dependencies {
+    // Dependências locais da pasta libs
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+def targetJavaVersion = 8
+java {
+    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
+    sourceCompatibility = javaVersion
+    targetCompatibility = javaVersion
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    filteringCharset = 'UTF-8'
+}
+
+shadowJar {
+    archiveFileName = "paragonn-system.jar"
+}
+
+task copyJar {
+    dependsOn shadowJar
+    doLast {
+        def jarFile = shadowJar.archiveFile.get().asFile
+        project.copy {
+            from jarFile
+            into "D:/terax-carlos/plugins"
+        }
+    }
+}
+
+build.dependsOn shadowJar
+shadowJar.finalizedBy copyJar
