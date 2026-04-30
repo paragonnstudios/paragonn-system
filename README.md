@@ -1,37 +1,90 @@
-# System
+# 🚀 Paragonn System
 
-Este sistema foi originalmente criado por RUSHyotuber com o intuito de ajudar muitos servidores e facilitar a vida das pessoas. Ao longo do tempo varios contribuintes foram ajudando para a otimização e o aprimoramento projeto.
+**Sistema geral completo, otimizado e extremamente útil para todos os tipos de servidores Minecraft.**
 
-Pessoas que contribuiram com o projeto [AnonyDev, LeoDev, Wolf_131, leonardosc, TequilAxBr, zAth, Jota, KickPost, gcunha, Gutyerrez, AlexHackers, BigWriter, Hard, Alomax, Joao Seidel, Pica-Pau, codename_G, Shisui, Kaway, Jamp, dargoh, aureom, VitorBlog, NatanDev, Duck, DvH, MarcioRUSH]
+O Paragonn System é a evolução de um dos plugins Essentials brasileiros mais utilizados. Construído ao longo de mais de 5 anos de desenvolvimento contínuo, ele oferece um conjunto completo de funcionalidades para simplificar a gestão de servidores, melhorar a performance e elevar a experiência dos jogadores.
 
-Link do plugin no Spigot: https://www.spigotmc.org/resources/system.102876/
+---
 
-Link do plugin na GamersBoard: https://gamersboard.com.br/topic/61255-system-o-seu-novo-super-essentials
+## 📌 Sobre o Projeto
 
-# Atenção Importante
-No dia 23 de junho de 2022 foi lançada a versão `1.14.19` do System. A partir deste dia em diante o plugin não receberá mais atualizações.
- 
-Atualmente a ultima versão `1.14.19` do plugin está **100% estável** e **não possui nenhum Bug**! 
- 
-A versão dá suporte completo desde o Minecraft **1.5** até o Minecraft **1.19** e também possui um pré-suporte para as versões 1.20 e 1.21 do Minecraft.
+Criado originalmente por **RUSHyotuber**, o projeto cresceu com a ajuda de uma forte comunidade de desenvolvedores e contribuidores.
 
-Importante lembrar: o plugin não esta "morto", ele funciona perfeitamente e não possui nenhum problema, ele só não recebe mais atualizações.
+Hoje, o Paragonn System se posiciona como uma solução **madura, estável e amplamente testada em produção**, utilizada por servidores de diversos portes.
 
-# Agradecimentos
-Gostaria de agrader a todas as pessoas que já colaboraram no System, tanto dando sugestões quanto ajudando com códigos ou ajudando a testar o plugin, em fim, gostaria de agradecer a todos que me ajudaram a evoluir como programador e ajudar o plugin a evoluir e se tornar o **plugin brasileiro mais usado**!
+> ⚠️ **Status de Manutenção**
+> Desde a versão `1.14.19` (lançada em 23 de junho de 2022), o projeto não recebe atualizações ativas.
+> Ainda assim, permanece **100% estável**, amplamente utilizado e funcional.
 
-Foram mais de 5 anos trabalhando no System e eu tenho muito orgulho de tudo que foi feito e de tudo que foi criado, muito obrigado a todos!
+---
 
-### Você gostaria de dar continuidade no System?
-Atualmente o System não possui nenhum desenvolvedor ativo dando continuidade no Projeto, caso você queira dar continuidade no projeto basta aprir um PullRequest ou entrar em contato comigo.
+## ⚙️ Compatibilidade
 
-### Oque ainda precisaria ser feito no System?
-Lista das coisas que ainda precisariam ser feitas no System para melhorar ainda mais o plugin.
-- [ ] Adicionar suporte ao sistema de Kits para a versão 1.17 e versões acima da 1.17.
-- [ ] Adicionar suporte a cores RGB nas novas versões do minecraft.
-- [ ] Adicionar suporte ao comando /bigorna e a funcionalidade bigorna infinita nas versões acima da 1.13.
-- [ ] Melhorar o comando /compactar e /derreter para serem compatíveis com os novos minérios das novas versões do minecraft.
-- [ ] Melhorar o comando /estatisticas e /verinfo para mostrar informações novas disponíveis nas novas versões do minecraft.
-- [ ] Estudar as versões do minecraft desde a 1.13 para identificar novos recursos e funcionalidades interessantes que poderiam ser adicionados no plugin.
-- [ ] Analisar as novas necessidades dos servidores modernos do minecraft para entender oque eles estão precisando e adicionar novos recursos e funcionalidades utis no plugin, a ultima vez que esse estudo foi feito foi em 2018.
-- [ ] Analisar o Timmings de servidores grandes que usam o System para identificar melhorias que possam ser feitas no código para deixa-lo mais otimizado.
+* ✅ Versões do Minecraft: **1.5 até 1.19**
+* ⚠️ Suporte experimental: **1.20 / 1.21**
+* 💡 Projetado para alta performance e estabilidade em diferentes escalas de servidores
+
+---
+
+## ✨ Principais Funcionalidades
+
+* Sistema completo de Essentials
+* Comandos administrativos e utilitários
+* Estrutura modular para personalização
+* Alto desempenho mesmo em servidores grandes
+* Base sólida e confiável em produção
+
+---
+
+## 🧠 Melhorias Futuras (Guiadas pela Comunidade)
+
+Caso alguém queira dar continuidade ao projeto, estas são algumas melhorias recomendadas:
+
+* [ ] Adicionar suporte ao sistema de Kits para versões **1.17+**
+* [ ] Implementar suporte a cores RGB nas versões mais recentes
+* [ ] Atualizar o comando `/bigorna` para versões **1.13+**
+* [ ] Melhorar `/compactar` e `/derreter` para novos minérios
+* [ ] Aprimorar `/estatisticas` e `/verinfo` com dados mais recentes
+* [ ] Estudar novas funcionalidades das versões pós-1.13
+* [ ] Analisar necessidades atuais de servidores modernos
+* [ ] Otimizar desempenho com base em timings de grandes servidores
+
+---
+
+## 🤝 Contribuição
+
+Atualmente, o projeto não possui um mantenedor ativo.
+
+Se você deseja continuar o desenvolvimento:
+
+* Abra um Pull Request
+* Ou entre em contato com o criador original
+
+Toda contribuição é bem-vinda.
+
+---
+
+## 👥 Créditos
+
+Este projeto só foi possível graças às contribuições de:
+
+**RUSHyotuber (Criador)**
+
+AnonyDev, LeoDev, Wolf_131, leonardosc, TequilAxBr, zAth, Jota, KickPost, gcunha, Gutyerrez, AlexHackers, BigWriter, Hard, Alomax, Joao Seidel, Pica-Pau, codename_G, Shisui, Kaway, Jamp, dargoh, aureom, VitorBlog, NatanDev, Duck, DvH, MarcioRUSH
+
+---
+
+## 🔗 Links Oficiais
+
+* Spigot: [https://www.spigotmc.org/resources/system.102876/](https://www.spigotmc.org/resources/system.102876/)
+* GamersBoard: [https://gamersboard.com.br/topic/61255-system-o-seu-novo-super-essentials](https://gamersboard.com.br/topic/61255-system-o-seu-novo-super-essentials)
+
+---
+
+## 💬 Considerações Finais
+
+O Paragonn System não é apenas um plugin — é o resultado de anos de dedicação, aprendizado e colaboração.
+
+Mesmo sem atualizações recentes, continua sendo uma solução extremamente confiável.
+
+Se alguém decidir levá-lo adiante, há uma base sólida pronta para evoluir ainda mais.
