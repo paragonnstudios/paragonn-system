@@ -1,10 +1,152 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '8.3.0'
 }
 
-group = 'studios.paragonn.system'
-version = '1.14.19'
+/**
+ * Ordem: {@code -PreleaseVersion} > env {@code RELEASE_VERSION} > env {@code GITHUB_REF} (refs/tags/vX.Y.Z)
+ * > {@code .release-please-manifest.json}. No CI da release use sempre a tag para o jar bater com o GitHub.
+ */
+static String normalizeReleaseVersionString(String raw) {
+    if (raw == null) {
+        return null
+    }
+    String s = raw.trim()
+    if (s.isEmpty()) {
+        return null
+    }
+    if (s.startsWith('refs/tags/')) {
+        s = s.substring('refs/tags/'.length()).trim()
+    }
+    if (s.length() >= 2 && (s.charAt(0) == 'v' || s.charAt(0) == 'V')) {
+        s = s.substring(1).trim()
+    }
+    return s.isEmpty() ? null : s
+}
+
+def resolveProjectVersion() {
+    if (project.hasProperty('releaseVersion')) {
+        def v = normalizeReleaseVersionString(project.property('releaseVersion').toString())
+        if (v != null) {
+            return v
+        }
+    }
+    def envRelease = normalizeReleaseVersionString(System.getenv('RELEASE_VERSION'))
+    if (envRelease != null) {
+        return envRelease
+    }
+    def envRef = normalizeReleaseVersionString(System.getenv('GITHUB_REF'))
+    if (envRef != null) {
+        return envRef
+    }
+    def manifestFile = project.file('.release-please-manifest.json')
+    if (!manifestFile.exists()) {
+        logger.lifecycle('.release-please-manifest.json nao encontrado; usando 0.0.0-SNAPSHOT')
+        return '0.0.0-SNAPSHOT'
+    }
+    def data = new groovy.json.JsonSlurper().parse(manifestFile)
+    def v = data['.']
+    return v != null ? v.toString().trim() : '0.0.0-SNAPSHOT'
+}
+
+group = 'studios.paragonn'
+version = resolveProjectVersion()
+
+/**
+ * Token GitHub embutido opcionalmente no {@code config.yml} dentro do JAR (updater).
+ * Ordem: {@code -PgithubToken} > env {@code PARAGONN_GITHUB_TOKEN} > {@code .env} (chave igual)
+ * > arquivo {@code github.token} na raiz do projeto (uma linha). Nada disso deve ir ao Git.
+ */
+static String readGithubTokenForPackaging(Project project) {
+    if (project.hasProperty('githubToken')) {
+        def s = project.property('githubToken').toString().trim()
+        if (!s.isEmpty()) {
+            return s
+        }
+    }
+    def env = System.getenv('PARAGONN_GITHUB_TOKEN')
+    if (env != null && !env.trim().isEmpty()) {
+        return env.trim()
+    }
+    def fromDot = parseDotEnvValue(project.file('.env'), 'PARAGONN_GITHUB_TOKEN')
+    if (fromDot != null && !fromDot.isEmpty()) {
+        return fromDot
+    }
+    def tokenFile = project.file('github.token')
+    if (tokenFile.exists()) {
+        def t = tokenFile.getText('UTF-8').trim()
+        if (!t.isEmpty()) {
+            return t
+        }
+    }
+    return ''
+}
+
+static String parseDotEnvValue(File f, String keyName) {
+    if (!f.exists()) {
+        return null
+    }
+    String found = null
+    f.withReader('UTF-8') { reader ->
+        reader.eachLine { line ->
+            if (found != null) {
+                return
+            }
+            String l = line.trim()
+            if (l.isEmpty() || l.startsWith('#')) {
+                return
+            }
+            int eq = l.indexOf('=')
+            if (eq <= 0) {
+                return
+            }
+            String key = l.substring(0, eq).trim()
+            if (key != keyName) {
+                return
+            }
+            String val = l.substring(eq + 1).trim()
+            if (val.length() >= 2) {
+                boolean dq = val.startsWith('"') && val.endsWith('"')
+                boolean sq = val.startsWith("'") && val.endsWith("'")
+                if (dq || sq) {
+                    val = val.substring(1, val.length() - 1)
+                }
+            }
+            found = val
+        }
+    }
+    return found
+}
+
+static String toYamlSingleQuotedToken(String raw) {
+    if (raw == null || raw.isEmpty()) {
+        return "''"
+    }
+    return "'" + raw.replace("'", "''") + "'"
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url = uri('https://repo.codemc.io/repository/maven-public/') }
+    maven { url = uri('https://repo.dmulloy2.net/nexus/repository/public/') }
+    maven { url = uri('https://repo.extendedclip.com/content/repositories/placeholderapi/') }
+}
+
+dependencies {
+    // JARs locais (Spigot/Paper, plugins compileOnly, etc.) — mesmo padrão de ambiente do projeto
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+    // API JSON do updater (em runtime costuma vir no classpath do servidor)
+    compileOnly 'com.googlecode.json-simple:json-simple:1.1.1'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
 
 sourceSets {
     main {
@@ -17,51 +159,33 @@ sourceSets {
     }
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven { url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/" }
-    maven { url = "https://repo.codemc.io/repository/maven-public/" }
-    maven { url = "https://jitpack.io" }
-    maven { url = "https://repo.extendedclip.com/content/repositories/placeholderapi/" }
-    maven { url = "https://libraries.minecraft.net/" }
-    maven { url = "https://nexus.hc.to/content/repositories/pub_releases" }
-}
-
-dependencies {
-    // Dependências locais da pasta libs
-    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
-}
-
-def targetJavaVersion = 8
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-}
-
 processResources {
     filteringCharset = 'UTF-8'
-}
-
-shadowJar {
-    archiveFileName = "paragonn-system.jar"
-}
-
-task copyJar {
-    dependsOn shadowJar
-    doLast {
-        def jarFile = shadowJar.archiveFile.get().asFile
-        project.copy {
-            from jarFile
-            into "D:/terax-carlos/plugins"
-        }
+    def tokenYaml = toYamlSingleQuotedToken(readGithubTokenForPackaging(project))
+    filesMatching('config.yml') {
+        filter { line -> line.replace('${githubTokenPackaged}', tokenYaml) }
+    }
+    filesMatching('plugin.yml') {
+        expand(
+                project: [
+                        artifactId: project.name,
+                        version   : project.version
+                ]
+        )
     }
 }
 
-build.dependsOn shadowJar
-shadowJar.finalizedBy copyJar
+jar {
+    archiveFileName = 'paragonn-system.jar'
+}
+
+tasks.register('deployPlugin', Copy) {
+    dependsOn tasks.jar
+    doNotTrackState("Deploy para pasta externa do servidor")
+    from("$buildDir/libs/paragonn-system.jar")
+    into(file('D:/paragonn.com.br/paragonn-server/plugins'))
+}
+
+tasks.named('build') {
+    finalizedBy(tasks.named('deployPlugin'))
+}

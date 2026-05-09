@@ -1,16 +1,19 @@
 package studios.paragonn.system;
 
+import java.io.File;
+
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import studios.paragonn.system.addons.LegendChat;
 import studios.paragonn.system.addons.Mcmmo;
+import studios.paragonn.system.addons.ParagonnCoreChat;
 import studios.paragonn.system.addons.Vault;
-import studios.paragonn.system.addons.legendchat.MagnataTag;
-import studios.paragonn.system.addons.legendchat.McTopTag;
+import studios.paragonn.system.addons.corechat.MagnataTag;
+import studios.paragonn.system.addons.corechat.McTopTag;
 import studios.paragonn.system.apis.APIS;
 import studios.paragonn.system.comandos.ComandoAlerta;
 import studios.paragonn.system.comandos.ComandoAlertaOLD;
@@ -173,6 +176,8 @@ import studios.paragonn.system.sistemas.spawners.SpawnerStackManager;
 import studios.paragonn.system.utils.ReflectionUtils;
 import studios.paragonn.system.utils.manager.ConfigManager;
 import studios.paragonn.system.utils.manager.DataManager;
+import studios.paragonn.system.updater.SystemUpdater;
+import studios.paragonn.system.updater.UpdaterJoinListener;
 
 public class Main extends JavaPlugin {
 
@@ -180,6 +185,8 @@ public class Main extends JavaPlugin {
 	private static Version version;
 	private static JarType jarType;
 	public static boolean setupFactions;
+	/** Uma vez true, a busca de update no GitHub já foi disparada nesta sessão. */
+	private boolean updaterCheckStarted;
 
 	@Override
 	public void onEnable() {
@@ -188,6 +195,7 @@ public class Main extends JavaPlugin {
 		carregarConfigs();
 		registrarEventos();
 		registrarComandos();
+		cleanupUpdaterArtifactsAfterStartup();
 	}
 
 	@Override
@@ -199,6 +207,7 @@ public class Main extends JavaPlugin {
 		main = this;
 		version = Version.getServerVersion();
 		jarType = JarType.getJarType();
+		SystemUpdater.resetGithubUpdateCheckLock();
 		ReflectionUtils.loadUtils();
 		APIS.load();
 	}
@@ -207,6 +216,7 @@ public class Main extends JavaPlugin {
 		DataManager.createFolder("kits");
 		DataManager.createFolder("warps");
 		DataManager.createFolder("playerdata");
+		ConfigManager.createConfig("config");
 		ConfigManager.createConfig("comandos");
 		ConfigManager.createConfig("settings");
 		ConfigManager.createConfig("mensagens");
@@ -686,11 +696,11 @@ public class Main extends JavaPlugin {
 			}
 		}
 
-		if (Settings.AtivarAddons_Legendchat) {
-			if (pm.getPlugin("Legendchat") == null) {
-				getServer().getConsoleSender().sendMessage("§c[System] Legendchat nao encontrado, desativando addons!");
-			} else if (Settings.CorAutomatica != null) {
-				pm.registerEvents(new LegendChat(), this);
+		if (Settings.AtivarAddons_Core) {
+			if (pm.getPlugin("paragonn-core") == null) {
+				getServer().getConsoleSender().sendMessage("§c[System] Paragonn Core nao encontrado, desativando addon de chat do core!");
+			} else {
+				pm.registerEvents(new ParagonnCoreChat(), this);
 			}
 		}
 
@@ -700,7 +710,7 @@ public class Main extends JavaPlugin {
 					getServer().getConsoleSender().sendMessage("§c[System] McMMO nao encontrado, desativando addons!");
 				} else {
 					pm.registerEvents(new Mcmmo(), this);
-					if (pm.getPlugin("Legendchat") != null) {
+					if (Settings.AtivarAddons_Core && pm.getPlugin("paragonn-core") != null) {
 						pm.registerEvents(new McTopTag(), this);
 						McTopTag.checkMCTop();
 					}
@@ -721,7 +731,7 @@ public class Main extends JavaPlugin {
 				getServer().getConsoleSender().sendMessage("§c[System] Vault nao encontrado, desativando addons!");
 			} else {
 				if (Vault.setupEconomy()) {
-					if (pm.getPlugin("Legendchat") != null) {
+					if (Settings.AtivarAddons_Core && pm.getPlugin("paragonn-core") != null) {
 						pm.registerEvents(new MagnataTag(), this);
 						MagnataTag.checkMagnata();
 					}
@@ -758,6 +768,78 @@ public class Main extends JavaPlugin {
 		pm.registerEvents(new PlayerData(), this);
 		pm.registerEvents(new ManterXpAoMorrer(), this);
 		pm.registerEvents(new Outros(), this);
+
+		File updaterConfigFile = new File(getDataFolder(), "config.yml");
+		if (updaterConfigFile.exists()) {
+			FileConfiguration updaterCfg = YamlConfiguration.loadConfiguration(updaterConfigFile);
+			if (updaterCfg.getBoolean("updater.check-on-first-admin-join", true)) {
+				pm.registerEvents(new UpdaterJoinListener(), this);
+			}
+		}
+	}
+
+	/**
+	 * Dispara no máximo uma vez por ativação do plugin a verificação de updates no GitHub,
+	 * na primeira vez que um jogador com {@link SystemUpdater#UPDATER_PERMISSION} entra.
+	 */
+	public void scheduleUpdaterWhenFirstAdminJoins() {
+		if (!this.isEnabled() || this.updaterCheckStarted) {
+			return;
+		}
+		this.updaterCheckStarted = true;
+		Bukkit.getScheduler().runTask(this, () -> {
+			if (this.isEnabled()) {
+				new SystemUpdater(this, 0).run();
+			}
+		});
+	}
+
+	/**
+	 * Remove pasta legada {@code plugins/paragonn-system/update} e jars deste plugin na pasta global de update do Spigot.
+	 */
+	private void cleanupUpdaterArtifactsAfterStartup() {
+		File legacyUpdateDir = new File(getDataFolder(), "update");
+		if (legacyUpdateDir.exists()) {
+			deleteRecursivelyQuiet(legacyUpdateDir);
+		}
+
+		File spigotUpdateDir = Bukkit.getUpdateFolderFile();
+		if (!spigotUpdateDir.exists() || !spigotUpdateDir.isDirectory()) {
+			return;
+		}
+
+		File pluginUpdateJar = new File(spigotUpdateDir, getPluginJarFilename());
+		File pluginPartialJar = new File(spigotUpdateDir, getPluginJarFilename() + ".part");
+		if (pluginUpdateJar.exists()) {
+			//noinspection ResultOfMethodCallIgnored
+			pluginUpdateJar.delete();
+		}
+		if (pluginPartialJar.exists()) {
+			//noinspection ResultOfMethodCallIgnored
+			pluginPartialJar.delete();
+		}
+
+		File[] remaining = spigotUpdateDir.listFiles();
+		if (remaining != null && remaining.length == 0) {
+			//noinspection ResultOfMethodCallIgnored
+			spigotUpdateDir.delete();
+		}
+	}
+
+	private static void deleteRecursivelyQuiet(File root) {
+		if (root == null || !root.exists()) {
+			return;
+		}
+		if (root.isDirectory()) {
+			File[] children = root.listFiles();
+			if (children != null) {
+				for (File c : children) {
+					deleteRecursivelyQuiet(c);
+				}
+			}
+		}
+		//noinspection ResultOfMethodCallIgnored
+		root.delete();
 	}
 	
 	private void notificarQueEsteRecursoNaoEstaDisponivelNestaVersao(String mensagem) {
@@ -766,6 +848,10 @@ public class Main extends JavaPlugin {
 
 	private void disablePlugin() {
 		try {
+			this.updaterCheckStarted = false;
+			SystemUpdater.UPDATER = null;
+			SystemUpdater.resetGithubUpdateCheckLock();
+
 			studios.paragonn.system.sistemas.spawners.SpawnerStackManager.save();
 			HandlerList.unregisterAll(this);
 			Bukkit.getScheduler().cancelTasks(this);
@@ -940,6 +1026,11 @@ public class Main extends JavaPlugin {
 
 	public static Main get() {
 		return main;
+	}
+
+	/** Nome do jar na pasta {@code plugins/} (pasta {@code update} do Spigot usa o mesmo nome). */
+	public String getPluginJarFilename() {
+		return getFile().getName();
 	}
 
 }

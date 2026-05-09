@@ -1,4 +1,4 @@
-file-version: 10
+file-version: 11
 ############################################################
 # +------------------------------------------------------+ #
 # |              Recuros Adicionais (Addons)             | #
@@ -8,16 +8,16 @@ AtivarAddons:
   MassiveFactions: true 
   #-> O Addon do Massive serve para não setar home nas terras dos inimigos
   
-  LegendChat: true
-  #-> O Addon do LegendChat serve para as Tags(McTop e Magnata), para o sistema de destacar 
-  #   a mensagem dos master e colocar cor automatica na mensagem.
+  Core: true
+  #-> Addon do Paragonn Core: tags McTop/Magnata no formato do chat, destaque (system.chat.destaque)
+  #   e cores automáticas na mensagem (integra com o chat interno do core).
   
   McMMO: true
   #-> O Addon do McMMO serve para mostra o XP na ActionBar e para anunicar quando upa 100 niveis
-  #   e criar a Tag McTop no LegendChat
+  #   e prefixar a tag McTop no chat (com Core ativo).
   
   Vault: false
-  #-> O Addon do Vault serve para a tag criar a Tag Magnata no LegendChat
+  #-> O Addon do Vault serve para a tag Magnata no chat (com Core ativo).
 
 ############################################################
 # +------------------------------------------------------+ #
@@ -498,7 +498,7 @@ Nicks-Bloqueados:
 # |                         mcMMO                        | #
 # +------------------------------------------------------+ #
 ############################################################
-#Tag no legendchat {mctop}
+# Prefixo no chat do Core para o líder mcMMO (skill global)
 #Para os nomes das skills ficarem em BR vc precisa estar usando um mcMMO traduzido
 mcTopTag:
   Tempo-De-Checagem: 900 #segundos
@@ -509,14 +509,14 @@ mcTopTag:
 # |                         Vault                        | #
 # +------------------------------------------------------+ #
 ############################################################
-#Tag no legendchat {magnata}
+# Prefixo no chat do Core para o jogador com maior saldo (Vault)
 magnataTag:
   Tempo-De-Checagem: 900 #segundos
   Tag: "&2[$] "
   
 ############################################################
 # +------------------------------------------------------+ #
-# |                      LegendChat                      | #
+# |               Chat (Paragonn Core) / Cores             | #
 # +------------------------------------------------------+ #
 ############################################################
 CorAutomatica:

@@ -1,2 +1,37 @@
+# Gradle
+.gradle/
+build/
 
+# Eclipse / Buildship
+.settings/
+.classpath
+.project
+.factorypath
+
+# IntelliJ / Cursor / VSCode
+.idea/
+*.iml
+.vscode/
+
+# Saída Eclipse / outras
+bin/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variáveis locais e segredos (não commitar)
+.env
+.env.*
+!.env.example
+
+# Token GitHub só para build local (empacotado no JAR pelo processResources, ver build.gradle)
+github.token
+
+# Gradle Wrapper (scripts locais; opcional versionar para CI)
+gradlew
+gradlew.bat
+
+# Compilados soltos
 *.class

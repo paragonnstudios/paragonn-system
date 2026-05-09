@@ -3,7 +3,7 @@ main: studios.paragonn.system.Main
 version: 1.14.19
 load: POSTWORLD
 author: RUSH
-softdepend: [Legendchat, mcMMO, MassiveCore, Factions, Vault]
+softdepend: [paragonn-core, mcMMO, MassiveCore, Factions, Vault]
 api-version: 1.13
 
 permissions:

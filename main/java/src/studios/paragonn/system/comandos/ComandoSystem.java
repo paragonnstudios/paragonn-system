@@ -47,6 +47,7 @@ import studios.paragonn.system.utils.SystemInfo;
 import studios.paragonn.system.utils.Utils;
 import studios.paragonn.system.utils.manager.ConfigManager;
 import studios.paragonn.system.utils.manager.DataManager;
+import studios.paragonn.system.updater.SystemUpdater;
 
 import static studios.paragonn.system.utils.Utils.bytesToLegibleValue;
 
@@ -63,6 +64,47 @@ public class ComandoSystem implements CommandExecutor {
 		}
 		
 		String cmd = args[0].toLowerCase();
+
+		if (cmd.equals("updates")) {
+			if (!s.hasPermission(SystemUpdater.UPDATER_PERMISSION)) {
+				s.sendMessage("§cSem permissão.");
+				return true;
+			}
+			SystemUpdater updater = new SystemUpdater(Main.get(), 0);
+			if (!updater.tryBeginGithubUpdateCheck()) {
+				s.sendMessage("§cNão foi possível iniciar: verificação já em andamento ou updater.github não configurado no config.yml.");
+				return true;
+			}
+			if (s instanceof Player) {
+				((Player) s).sendMessage("§aVerificação no GitHub iniciada.");
+			} else {
+				s.sendMessage("Verificacao no GitHub iniciada.");
+			}
+			return true;
+		}
+
+		if (cmd.equals("atualizar")) {
+			if (!s.hasPermission(SystemUpdater.UPDATER_PERMISSION)) {
+				s.sendMessage("§cSem permissão.");
+				return true;
+			}
+			if (!(s instanceof Player)) {
+				s.sendMessage("§cApenas jogadores podem baixar o update. O console pode usar /system updates para verificar.");
+				return true;
+			}
+			Player player = (Player) s;
+			if (SystemUpdater.UPDATER != null) {
+				if (!SystemUpdater.UPDATER.canDownload) {
+					player.sendMessage(" \n§6§lparagonn-system\n \n§aJa existe atualizacao pendente. §f/stop§a e inicie o servidor para aplicar.\n ");
+					return true;
+				}
+				SystemUpdater.UPDATER.canDownload = false;
+				SystemUpdater.UPDATER.downloadUpdate(player);
+			} else {
+				player.sendMessage("§aO plugin já se encontra em sua última versão.");
+			}
+			return true;
+		}
 		
 		//////////////////////////////////////////////////////////////////////////////////////////////////////
 			

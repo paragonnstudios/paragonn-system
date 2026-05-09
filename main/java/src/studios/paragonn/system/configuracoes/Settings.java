@@ -16,7 +16,7 @@ import studios.paragonn.system.utils.manager.ConfigManager;
 public class Settings {
 
 	public static boolean AtivarAddons_MassiveFactions;
-	public static boolean AtivarAddons_Legendchat;
+	public static boolean AtivarAddons_Core;
 	public static boolean AtivarAddons_McMMO;
 	public static boolean AtivarAddons_Vault;
 	public static boolean Bloquear_Cama;
@@ -156,7 +156,9 @@ public class Settings {
 	public static void loadSettings() {
 		FileConfiguration config = ConfigManager.getConfig("settings");
 		AtivarAddons_MassiveFactions = config.getBoolean("AtivarAddons.MassiveFactions");
-		AtivarAddons_Legendchat = config.getBoolean("AtivarAddons.LegendChat");
+		AtivarAddons_Core = config.contains("AtivarAddons.Core")
+				? config.getBoolean("AtivarAddons.Core")
+				: config.getBoolean("AtivarAddons.LegendChat");
 		AtivarAddons_McMMO = config.getBoolean("AtivarAddons.McMMO");
 		AtivarAddons_Vault = config.getBoolean("AtivarAddons.Vault");
 		Bloquear_Cama = config.getBoolean("Bloquear-Cama");

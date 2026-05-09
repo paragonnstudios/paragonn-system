@@ -1,0 +1,12 @@
+# Configuração geral do paragonn-system (ex.: updates via GitHub).
+# Repositório privado: defina no servidor a variável de ambiente PARAGONN_GITHUB_TOKEN (escopo contents:read).
+
+updater:
+  # Dispara no máximo uma checagem por sessão quando o primeiro jogador com system.system entra.
+  check-on-first-admin-join: true
+  github:
+    owner: ''
+    repo: ''
+    asset-name: 'paragonn-system.jar'
+    # token: opcional; prefira PARAGONN_GITHUB_TOKEN em produção (build pode embutir via -PgithubToken / env, ver build.gradle)
+    token: ${githubTokenPackaged}
