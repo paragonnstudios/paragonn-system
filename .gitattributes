@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Script do wrapper: sempre LF (CI Linux / shebang)
+gradlew text eol=lf

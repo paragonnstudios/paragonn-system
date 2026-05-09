@@ -29,9 +29,5 @@ Thumbs.db
 # Token GitHub só para build local (empacotado no JAR pelo processResources, ver build.gradle)
 github.token
 
-# Gradle Wrapper (scripts locais; opcional versionar para CI)
-gradlew
-gradlew.bat
-
 # Compilados soltos
 *.class

@@ -2,6 +2,13 @@
 
 **Sistema geral completo, otimizado e extremamente útil para todos os tipos de servidores Minecraft.**
 
+## Versão e release (GitHub)
+
+Fluxo alinhado ao **paragonn-core**: commits em **`main`** ou **`master`** com [Conventional Commits](https://www.conventionalcommits.org/) → [Release Please](https://github.com/googleapis/release-please) abre uma **Release PR** → ao **merge**, são criados **tag** (`vX.Y.Z`), **GitHub Release** e o workflow **`.github/workflows/release.yml`** publica o asset **`paragonn-system.jar`**.
+
+- **Versão no JAR:** no CI passa-se **`-PreleaseVersion`** a partir da tag (`v1.12.3` → `1.12.3`). Localmente: **`.release-please-manifest.json`** ou `./gradlew jar -PreleaseVersion=1.12.3` ou env **`RELEASE_VERSION`** / **`GITHUB_REF`** (ver `build.gradle`).
+- **Token opcional:** secret **`RELEASE_PLEASE_TOKEN`** (PAT com `contents` e `pull-requests`) se o `GITHUB_TOKEN` padrão não for suficiente para abrir/atualizar a PR de release ou anexar o JAR.
+
 O Paragonn System é a evolução de um dos plugins Essentials brasileiros mais utilizados. Construído ao longo de mais de 5 anos de desenvolvimento contínuo, ele oferece um conjunto completo de funcionalidades para simplificar a gestão de servidores, melhorar a performance e elevar a experiência dos jogadores.
 
 ---
