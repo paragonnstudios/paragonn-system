@@ -173,8 +173,8 @@ public class SystemUpdater {
 			try {
 				this.githubApiUseAuthorization = computeGithubApiUseAuthorization(owner, repo, this.githubToken);
 			} catch (IOException ex) {
-				logWarning("Nao foi possivel consultar visibilidade do repo (" + ex.getMessage() + "); usando token se existir.");
-				this.githubApiUseAuthorization = this.githubToken != null && !this.githubToken.trim().isEmpty();
+				logWarning("Nao foi possivel consultar visibilidade do repo (" + ex.getMessage() + "); assumindo API sem Authorization (evita 401 com token global invalido em repo publico).");
+				this.githubApiUseAuthorization = false;
 			}
 			this.githubApiAuthResolved = true;
 			logInfo("Pedidos a API GitHub " + (this.githubApiUseAuthorization ? "com Authorization (repo privado ou limite)." : "sem Authorization (repo publico)."));
@@ -200,6 +200,17 @@ public class SystemUpdater {
 			return true;
 		}
 		return hasTok;
+	}
+
+	private static boolean isHttp401FromGithub(IOException ex) {
+		return ex != null && ex.getMessage() != null && ex.getMessage().contains("401");
+	}
+
+	private void disableGithubAuthorizationAfter401() {
+		synchronized (this) {
+			this.githubApiAuthResolved = true;
+			this.githubApiUseAuthorization = false;
+		}
 	}
 
 	private static int httpRepoMetaStatus(String url, boolean withAuth, String tok) throws IOException {
@@ -328,12 +339,22 @@ public class SystemUpdater {
 		String listUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases?per_page=50";
 
 		JSONArray releases;
-		try {
-			releases = requestJsonArray(listUrl);
-		} catch (IOException ex) {
-			logInfo("Lista de releases falhou (" + ex.getMessage() + "); tentando /releases/latest.");
-			loadLatestReleaseFromLatestEndpoint(owner, repo);
-			return;
+		boolean retried401List = false;
+		while (true) {
+			try {
+				releases = requestJsonArray(listUrl);
+				break;
+			} catch (IOException ex) {
+				if (!retried401List && this.githubApiUseAuthorization && isHttp401FromGithub(ex)) {
+					logWarning("HTTP 401 com Authorization; a repetir lista de releases sem token.");
+					disableGithubAuthorizationAfter401();
+					retried401List = true;
+					continue;
+				}
+				logInfo("Lista de releases falhou (" + ex.getMessage() + "); tentando /releases/latest.");
+				loadLatestReleaseFromLatestEndpoint(owner, repo);
+				return;
+			}
 		}
 
 		JSONObject bestRelease = null;
@@ -413,12 +434,27 @@ public class SystemUpdater {
 	}
 
 	private void loadLatestReleaseFromLatestEndpoint(String owner, String repo) throws IOException {
-		JSONObject release = requestJson("https://api.github.com/repos/" + owner + "/" + repo + "/releases/latest");
-		Object tagName = release.get("tag_name");
-		if (tagName != null) {
-			this.latestVersion = tagName.toString().trim();
+		String url = "https://api.github.com/repos/" + owner + "/" + repo + "/releases/latest";
+		boolean retried401 = false;
+		while (true) {
+			try {
+				JSONObject release = requestJson(url);
+				Object tagName = release.get("tag_name");
+				if (tagName != null) {
+					this.latestVersion = tagName.toString().trim();
+				}
+				this.downloadUrl = findAssetDownloadUrl((JSONArray) release.get("assets"), this.githubAssetName);
+				return;
+			} catch (IOException ex) {
+				if (!retried401 && this.githubApiUseAuthorization && isHttp401FromGithub(ex)) {
+					logWarning("HTTP 401 em /releases/latest; a repetir sem token.");
+					disableGithubAuthorizationAfter401();
+					retried401 = true;
+					continue;
+				}
+				throw ex;
+			}
 		}
-		this.downloadUrl = findAssetDownloadUrl((JSONArray) release.get("assets"), this.githubAssetName);
 	}
 
 	private static String normalizeReleaseVersion(String raw) {
