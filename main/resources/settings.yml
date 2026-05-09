@@ -5,14 +5,14 @@ file-version: 11
 # +------------------------------------------------------+ #
 ############################################################
 AtivarAddons:
-  MassiveFactions: true 
+  MassiveFactions: false 
   #-> O Addon do Massive serve para não setar home nas terras dos inimigos
   
   Core: true
   #-> Addon do Paragonn Core: tags McTop/Magnata no formato do chat, destaque (system.chat.destaque)
   #   e cores automáticas na mensagem (integra com o chat interno do core).
   
-  McMMO: true
+  McMMO: false
   #-> O Addon do McMMO serve para mostra o XP na ActionBar e para anunicar quando upa 100 niveis
   #   e prefixar a tag McTop no chat (com Core ativo).
   
