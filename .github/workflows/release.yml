@@ -54,11 +54,12 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.release-please.outputs.tag_name }}
 
-      - name: Set up Java 8
+      # Gradle 9.x exige JVM 17+ para o daemon; o bytecode do plugin segue Java 8 (toolchain no build.gradle).
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '21'
 
       - name: Build jar
         run: |
@@ -86,11 +87,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Set up Java 8
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '21'
 
       - name: Build jar
         run: |
