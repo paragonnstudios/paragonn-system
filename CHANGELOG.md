@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. Versions and tags are managed by [Release Please](https://github.com/googleapis/release-please) (Conventional Commits on `main` or `master`).
 
+## [1.15.2](https://github.com/paragonnstudios/paragonn-system/compare/v1.15.1...v1.15.2) (2026-05-09)
+
+
+### Bug Fixes
+
+* invunerables ([7a74327](https://github.com/paragonnstudios/paragonn-system/commit/7a74327441b4d3a693a17308d8beba4b3788a3a1))
+
 ## [1.15.1](https://github.com/paragonnstudios/paragonn-system/compare/v1.15.0...v1.15.1) (2026-05-09)
 
 
