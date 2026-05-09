@@ -73,6 +73,9 @@ public class SystemUpdater {
 	private String downloadUrl;
 	private int lastHttpCode = -1;
 	private BukkitTask loadingTask;
+	/** Definido na primeira consulta a {@code /repos/owner/repo}: publico sem token; privado ou limite com token. */
+	private boolean githubApiAuthResolved;
+	private boolean githubApiUseAuthorization;
 
 	public SystemUpdater(JavaPlugin plugin, int resourceId) {
 		this(plugin);
@@ -85,10 +88,43 @@ public class SystemUpdater {
 		this.githubOwner = cfg.getString("updater.github.owner", "");
 		this.githubRepo = cfg.getString("updater.github.repo", "");
 		this.githubAssetName = cfg.getString("updater.github.asset-name", "paragonn-system.jar");
-		String tokenFromConfig = cfg.getString("updater.github.token", "");
-		this.githubToken = tokenFromConfig == null || tokenFromConfig.trim().isEmpty()
-				? System.getenv("PARAGONN_GITHUB_TOKEN")
-				: tokenFromConfig.trim();
+		this.githubToken = resolveGithubToken(cfg.getString("updater.github.token", ""), this.logger);
+	}
+
+	/**
+	 * Resolve o PAT: YAML tem prioridade se for um token real; placeholder não substituído ou vazio cai para
+	 * {@code PARAGONN_GITHUB_TOKEN}. Prefixo {@code Bearer } duplicado (utilizador colou o header inteiro no YAML) é removido
+	 * porque o código já envia {@code Authorization: Bearer ...}.
+	 */
+	private static String resolveGithubToken(String tokenFromYaml, Logger logger) {
+		String fromEnv = System.getenv("PARAGONN_GITHUB_TOKEN");
+		String fromCfg = tokenFromYaml == null ? "" : tokenFromYaml.trim();
+		if (fromCfg.isEmpty()) {
+			return stripBearerPrefix(fromEnv);
+		}
+		// Build sem token / JAR antigo: literal continua no YAML → GitHub devolve 401 se for enviado como Bearer
+		if (fromCfg.contains("githubTokenPackaged")) {
+			if (logger != null) {
+				logger.log(Level.INFO, "[UPDATER] Token no config.yml ainda e placeholder de build; ignorando e usando PARAGONN_GITHUB_TOKEN se existir.");
+			}
+			return stripBearerPrefix(fromEnv);
+		}
+		String normalized = stripBearerPrefix(fromCfg);
+		if (normalized == null || normalized.isEmpty()) {
+			return stripBearerPrefix(fromEnv);
+		}
+		return normalized;
+	}
+
+	private static String stripBearerPrefix(String token) {
+		if (token == null) {
+			return null;
+		}
+		String t = token.trim();
+		if (t.regionMatches(true, 0, "bearer ", 0, 7)) {
+			t = t.substring(7).trim();
+		}
+		return t.isEmpty() ? null : t;
 	}
 
 	private static FileConfiguration loadConfig(JavaPlugin plugin) {
@@ -123,10 +159,108 @@ public class SystemUpdater {
 		connection.setRequestProperty("Accept", "application/vnd.github+json");
 		connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
 		connection.setRequestProperty("User-Agent", "paragonn-system-updater");
-		if (this.githubToken != null && !this.githubToken.trim().isEmpty()) {
+		if (this.githubApiUseAuthorization && this.githubToken != null && !this.githubToken.trim().isEmpty()) {
 			connection.setRequestProperty("Authorization", "Bearer " + this.githubToken.trim());
 		}
 		return connection;
+	}
+
+	private void ensureGithubApiAuthMode(String owner, String repo) {
+		synchronized (this) {
+			if (this.githubApiAuthResolved) {
+				return;
+			}
+			try {
+				this.githubApiUseAuthorization = computeGithubApiUseAuthorization(owner, repo, this.githubToken);
+			} catch (IOException ex) {
+				logWarning("Nao foi possivel consultar visibilidade do repo (" + ex.getMessage() + "); usando token se existir.");
+				this.githubApiUseAuthorization = this.githubToken != null && !this.githubToken.trim().isEmpty();
+			}
+			this.githubApiAuthResolved = true;
+			logInfo("Pedidos a API GitHub " + (this.githubApiUseAuthorization ? "com Authorization (repo privado ou limite)." : "sem Authorization (repo publico)."));
+		}
+	}
+
+	private static boolean computeGithubApiUseAuthorization(String owner, String repo, String token) throws IOException {
+		String meta = "https://api.github.com/repos/" + owner + "/" + repo;
+		boolean hasTok = token != null && !token.trim().isEmpty();
+		int anon = httpRepoMetaStatus(meta, false, null);
+		if (anon == 200) {
+			JSONObject jo = httpRepoMetaJson(meta, false, null);
+			if (jo != null && Boolean.TRUE.equals(jo.get("private"))) {
+				return hasTok;
+			}
+			return false;
+		}
+		if (anon == 404 && hasTok) {
+			int auth = httpRepoMetaStatus(meta, true, token.trim());
+			return auth == 200;
+		}
+		if (anon == 403 && hasTok) {
+			return true;
+		}
+		return hasTok;
+	}
+
+	private static int httpRepoMetaStatus(String url, boolean withAuth, String tok) throws IOException {
+		HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+		connection.setRequestMethod("GET");
+		connection.setRequestProperty("Accept", "application/vnd.github+json");
+		connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+		connection.setRequestProperty("User-Agent", "paragonn-system-updater");
+		if (withAuth && tok != null && !tok.trim().isEmpty()) {
+			connection.setRequestProperty("Authorization", "Bearer " + tok.trim());
+		}
+		int code = connection.getResponseCode();
+		discardHttpBody(connection);
+		return code;
+	}
+
+	private static JSONObject httpRepoMetaJson(String url, boolean withAuth, String tok) throws IOException {
+		HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+		connection.setRequestMethod("GET");
+		connection.setRequestProperty("Accept", "application/vnd.github+json");
+		connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+		connection.setRequestProperty("User-Agent", "paragonn-system-updater");
+		if (withAuth && tok != null && !tok.trim().isEmpty()) {
+			connection.setRequestProperty("Authorization", "Bearer " + tok.trim());
+		}
+		int code = connection.getResponseCode();
+		if (code < 200 || code >= 300) {
+			discardHttpBody(connection);
+			return null;
+		}
+		try (InputStreamReader reader = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
+			Object parsed = new JSONParser().parse(reader);
+			if (parsed instanceof JSONObject) {
+				return (JSONObject) parsed;
+			}
+		} catch (org.json.simple.parser.ParseException ex) {
+			return null;
+		}
+		return null;
+	}
+
+	private static void discardHttpBody(HttpsURLConnection connection) throws IOException {
+		InputStream err = connection.getErrorStream();
+		if (err != null) {
+			try {
+				byte[] buf = new byte[8192];
+				while (err.read(buf) != -1) {
+				}
+			} finally {
+				err.close();
+			}
+			return;
+		}
+		InputStream in = connection.getInputStream();
+		try {
+			byte[] buf = new byte[8192];
+			while (in.read(buf) != -1) {
+			}
+		} finally {
+			in.close();
+		}
 	}
 
 	private JSONObject requestJson(String url) throws IOException {
@@ -190,6 +324,7 @@ public class SystemUpdater {
 
 		String owner = this.githubOwner.trim();
 		String repo = this.githubRepo.trim();
+		ensureGithubApiAuthMode(owner, repo);
 		String listUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases?per_page=50";
 
 		JSONArray releases;
@@ -631,8 +766,8 @@ public class SystemUpdater {
 				connection.setRequestProperty("Accept", "application/octet-stream");
 				connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
 				connection.setRequestProperty("User-Agent", "paragonn-system-updater");
-				if (this.githubToken != null && !this.githubToken.trim().isEmpty()) {
-					connection.setRequestProperty("Authorization", "Bearer " + this.githubToken.trim());
+				if (githubApiUseAuthorization && githubToken != null && !githubToken.trim().isEmpty()) {
+					connection.setRequestProperty("Authorization", "Bearer " + githubToken.trim());
 				}
 
 				int max = connection.getContentLength();

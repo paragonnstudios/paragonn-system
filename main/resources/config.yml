@@ -5,8 +5,8 @@ updater:
   # Dispara no máximo uma checagem por sessão quando o primeiro jogador com system.system entra.
   check-on-first-admin-join: true
   github:
-    owner: ''
-    repo: ''
+    owner: 'paragonnstudios'
+    repo: 'paragonn-system'
     asset-name: 'paragonn-system.jar'
     # token: opcional; prefira PARAGONN_GITHUB_TOKEN em produção (build pode embutir via -PgithubToken / env, ver build.gradle)
     token: ${githubTokenPackaged}
