@@ -6,13 +6,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import studios.paragonn.system.Main;
 import studios.paragonn.system.addons.MassiveFactions;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
 import studios.paragonn.system.sistemas.comandos.BackListener;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 public class ComandoBack implements CommandExecutor {
 
@@ -47,13 +47,10 @@ public class ComandoBack implements CommandExecutor {
 		// Verificando se ele possui permissão para se teleportar sem precisar esperar
 		if (!p.hasPermission("system.semdelay")) {
 			p.sendMessage(Mensagens.Iniciando_Teleporte_Back);
-			new BukkitRunnable() {
-				@Override
-				public void run() {
+			TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 					p.teleport(l, TeleportCause.COMMAND);
 					p.sendMessage(Mensagens.Back_Teleportado_Sucesso);
-				}
-			}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+			});
 			return true;
 		}
 			

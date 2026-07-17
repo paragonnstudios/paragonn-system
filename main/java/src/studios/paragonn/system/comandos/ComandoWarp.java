@@ -7,14 +7,13 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import studios.paragonn.system.Main;
 import studios.paragonn.system.apis.TitleAPI;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
 import studios.paragonn.system.entidades.Warp;
 import studios.paragonn.system.entidades.Warps;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 @SuppressWarnings("all")
 public class ComandoWarp implements CommandExecutor {
@@ -89,18 +88,15 @@ public class ComandoWarp implements CommandExecutor {
 			if (w.enviarMensagem() && w.getDelay() > 0 && w.getMensagemInicio() != null && !w.getMensagemInicio().isEmpty()) {
 				s.sendMessage(w.getMensagemInicio());
 			}
-			new BukkitRunnable() {
-				@Override
-				public void run() {
+			TeleportDelayManager.iniciar(p, w.getDelay(), () -> {
 					p.teleport(location, TeleportCause.COMMAND);
 					if (w.enviarTitle() || w.enviarSubtitle()) {
-						TitleAPI.sendTitle(p, 10, 40, 10, w.enviarTitle() && w.getTitle() != null ? w.getTitle() : "", w.enviarSubtitle() && w.getSubtitle() != null ? w.getSubtitle() : "");		
+						TitleAPI.sendTitle(p, 10, 40, 10, w.enviarTitle() && w.getTitle() != null ? w.getTitle() : "", w.enviarSubtitle() && w.getSubtitle() != null ? w.getSubtitle() : "");
 					}
 					if (w.enviarMensagem() && w.getMensagemFinal() != null && !w.getMensagemFinal().isEmpty()) {
 						s.sendMessage(w.getMensagemFinal());
 					}
-				}
-			}.runTaskLater(Main.get(), 20L * w.getDelay());
+			});
 			return true;
 		}
 			    	

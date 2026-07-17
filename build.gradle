@@ -2,264 +2,125 @@ plugins {
     id 'java'
 }
 
-/**
- * Ordem: {@code -PreleaseVersion} > env {@code RELEASE_VERSION} > env {@code GITHUB_REF} (refs/tags/vX.Y.Z)
- * > {@code .release-please-manifest.json}. No CI da release use sempre a tag para o jar bater com o GitHub.
- */
-static String normalizeReleaseVersionString(String raw) {
-    if (raw == null) {
-        return null
-    }
-    String s = raw.trim()
-    if (s.isEmpty()) {
-        return null
-    }
-    if (s.startsWith('refs/tags/')) {
-        s = s.substring('refs/tags/'.length()).trim()
-    }
-    if (s.length() >= 2 && (s.charAt(0) == 'v' || s.charAt(0) == 'V')) {
-        s = s.substring(1).trim()
-    }
-    return s.isEmpty() ? null : s
+// --- Lógica de Versão (Sem dependência de JSON Parser para máxima compatibilidade) ---
+def normalizeVersion(raw) {
+    if (!raw) return null
+    def s = raw.toString().trim()
+    if (s.startsWith('refs/tags/')) s = s.substring(10).trim()
+    if (s.toLowerCase().startsWith('v')) s = s.substring(1).trim()
+    return s ?: null
 }
 
 def resolveProjectVersion() {
-    if (project.hasProperty('releaseVersion')) {
-        def v = normalizeReleaseVersionString(project.property('releaseVersion').toString())
-        if (v != null) {
-            return v
+    def v = providers.gradleProperty('releaseVersion')
+            .orElse(providers.environmentVariable('RELEASE_VERSION'))
+            .orElse(providers.environmentVariable('GITHUB_REF'))
+            .orNull
+            
+    if (v) {
+        def norm = normalizeVersion(v)
+        if (norm) return norm
+    }
+
+    def manifestFile = layout.projectDirectory.file('.release-please-manifest.json').asFile
+    if (manifestFile.exists()) {
+        def text = manifestFile.text
+        // Regex simples para extrair a versão do .release-please-manifest.json
+        def matcher = (text =~ /"\.":\s*"([^"]+)"/)
+        if (matcher.find()) {
+            return matcher.group(1).trim()
         }
     }
-    def envRelease = normalizeReleaseVersionString(System.getenv('RELEASE_VERSION'))
-    if (envRelease != null) {
-        return envRelease
-    }
-    def envRef = normalizeReleaseVersionString(System.getenv('GITHUB_REF'))
-    if (envRef != null) {
-        return envRef
-    }
-    def manifestFile = project.file('.release-please-manifest.json')
-    if (!manifestFile.exists()) {
-        logger.lifecycle('.release-please-manifest.json nao encontrado; usando 0.0.0-SNAPSHOT')
-        return '0.0.0-SNAPSHOT'
-    }
-    def data = new groovy.json.JsonSlurper().parse(manifestFile)
-    def v = data['.']
-    return v != null ? v.toString().trim() : '0.0.0-SNAPSHOT'
+    return '0.0.0-SNAPSHOT'
 }
 
 group = 'studios.paragonn'
 version = resolveProjectVersion()
 
-/**
- * Token GitHub lido para o build (nao commitar). Ordem: {@code -PgithubToken} > env {@code PARAGONN_GITHUB_TOKEN} >
- * {@code .env} > {@code github.token}.
- * <p>No {@code processResources}, o token so e escrito no {@code config.yml} do JAR se o repositorio
- * {@code updater.github.owner/repo} for privado (detecao via API); repositorio publico gera {@code token: ''}.</p>
- */
-static String readGithubTokenForPackaging(Project project) {
-    if (project.hasProperty('githubToken')) {
-        def s = project.property('githubToken').toString().trim()
-        if (!s.isEmpty()) {
-            return s
-        }
-    }
-    def env = System.getenv('PARAGONN_GITHUB_TOKEN')
-    if (env != null && !env.trim().isEmpty()) {
-        return env.trim()
-    }
-    def fromDot = parseDotEnvValue(project.file('.env'), 'PARAGONN_GITHUB_TOKEN')
-    if (fromDot != null && !fromDot.isEmpty()) {
-        return fromDot
-    }
-    def tokenFile = project.file('github.token')
-    if (tokenFile.exists()) {
-        def t = tokenFile.getText('UTF-8').trim()
-        if (!t.isEmpty()) {
-            return t
+// --- Lógica de Token GitHub ---
+def readGithubToken() {
+    def token = providers.gradleProperty('githubToken')
+            .orElse(providers.environmentVariable('PARAGONN_GITHUB_TOKEN'))
+            .orNull
+    if (token) return token.trim()
+
+    def dotEnv = layout.projectDirectory.file('.env').asFile
+    if (dotEnv.exists()) {
+        def match = dotEnv.readLines().find { it.trim().startsWith('PARAGONN_GITHUB_TOKEN=') }
+        if (match) {
+            def val = match.split('=', 2)[1].trim()
+            return val.replaceAll(/^["']|["']$/, '')
         }
     }
     return ''
 }
 
-static String parseDotEnvValue(File f, String keyName) {
-    if (!f.exists()) {
-        return null
-    }
-    String found = null
-    f.withReader('UTF-8') { reader ->
-        reader.eachLine { line ->
-            if (found != null) {
-                return
-            }
-            String l = line.trim()
-            if (l.isEmpty() || l.startsWith('#')) {
-                return
-            }
-            int eq = l.indexOf('=')
-            if (eq <= 0) {
-                return
-            }
-            String key = l.substring(0, eq).trim()
-            if (key != keyName) {
-                return
-            }
-            String val = l.substring(eq + 1).trim()
-            if (val.length() >= 2) {
-                boolean dq = val.startsWith('"') && val.endsWith('"')
-                boolean sq = val.startsWith("'") && val.endsWith("'")
-                if (dq || sq) {
-                    val = val.substring(1, val.length() - 1)
-                }
-            }
-            found = val
-        }
-    }
-    return found
-}
-
-static String toYamlSingleQuotedToken(String raw) {
-    if (raw == null || raw.isEmpty()) {
-        return "''"
-    }
+def toYamlToken(raw) {
+    if (!raw) return "''"
     return "'" + raw.replace("'", "''") + "'"
 }
 
-/** Le {@code owner} e {@code repo} em {@code updater.github} no YAML de recursos. */
-static Map readUpdaterGithubCoords(File f) {
-    String owner = ''
-    String repo = ''
-    if (f == null || !f.exists()) {
-        return [owner: owner, repo: repo]
-    }
+def readUpdaterCoords(configFile) {
+    def coords = [owner: '', repo: '']
+    if (!configFile || !configFile.exists()) return coords
+    
     boolean inGithub = false
     int githubIndent = -1
-    f.eachLine { String rawLine ->
-        String line = rawLine.replaceFirst(/\s+$/, '')
-        if (!line || line.trim().isEmpty() || line.trim().startsWith('#')) {
-            return
-        }
-        int indent = 0
-        for (int i = 0; i < rawLine.length(); i++) {
-            char ch = rawLine.charAt(i)
-            if (ch == ' ' || ch == '\t') {
-                indent++
-            } else {
-                break
-            }
-        }
-        String trimmed = line.trim()
+    
+    configFile.eachLine { rawLine ->
+        def line = rawLine.replaceFirst(/\s+$/, '')
+        if (!line || line.trim().startsWith('#')) return
+        
+        int indent = rawLine.takeWhile { it == ' ' || it == '\t' }.length()
+        def trimmed = line.trim()
+        
         if (trimmed.startsWith('github:')) {
             inGithub = true
             githubIndent = indent
-            return
-        }
-        if (inGithub) {
+        } else if (inGithub) {
             if (indent <= githubIndent) {
                 inGithub = false
-                return
-            }
-            if (trimmed.startsWith('owner:')) {
-                owner = extractYamlScalarValue(trimmed)
+            } else if (trimmed.startsWith('owner:')) {
+                coords.owner = extractYamlValue(trimmed)
             } else if (trimmed.startsWith('repo:')) {
-                repo = extractYamlScalarValue(trimmed)
+                coords.repo = extractYamlValue(trimmed)
             }
         }
     }
-    return [owner: owner.trim(), repo: repo.trim()]
+    return coords
 }
 
-static String extractYamlScalarValue(String line) {
-    int idx = line.indexOf(':')
-    if (idx < 0) {
-        return ''
-    }
-    String v = line.substring(idx + 1).trim()
-    if (!v) {
-        return ''
-    }
-    if ((v.startsWith("'") && v.endsWith("'")) || (v.startsWith('"') && v.endsWith('"'))) {
-        return v.length() >= 2 ? v.substring(1, v.length() - 1) : ''
-    }
-    return v
+def extractYamlValue(line) {
+    def parts = line.split(':', 2)
+    if (parts.length < 2) return ''
+    def v = parts[1].trim()
+    return v.replaceAll(/^["']|["']$/, '')
 }
 
-static void drainHttpConnection(java.net.HttpURLConnection c) {
+boolean shouldEmbedToken(owner, repo, token) {
+    if (!owner || !repo) return false
+    def meta = "https://api.github.com/repos/${owner}/${repo}"
+    def tokNorm = token?.replaceFirst(/(?i)^Bearer\s+/, '')
+    
     try {
-        java.io.InputStream err = c.getErrorStream()
-        if (err != null) {
-            byte[] buf = new byte[8192]
-            while (err.read(buf) != -1) {
-            }
-            err.close()
-            return
+        def conn = new java.net.URL(meta).openConnection()
+        conn.setRequestProperty('User-Agent', 'paragonn-build')
+        int code = conn.responseCode
+        if (code == 200) {
+            def body = conn.inputStream.text
+            // Verifica se o repositório é privado sem precisar de um parser JSON
+            return body.contains('"private":true') && tokNorm
         }
-        java.io.InputStream in = c.getInputStream()
-        byte[] buf = new byte[8192]
-        while (in.read(buf) != -1) {
+        if (code == 404 && tokNorm) {
+            def connAuth = new java.net.URL(meta).openConnection()
+            connAuth.setRequestProperty('Authorization', "Bearer ${tokNorm}")
+            connAuth.setRequestProperty('User-Agent', 'paragonn-build')
+            return connAuth.responseCode == 200
         }
-        in.close()
-    } catch (Throwable ignored) {
-    }
-}
-
-/**
- * Se true, o token lido do .env/etc. deve ser embutido no config.yml do JAR (repo privado ou 404 anon + 200 com PAT).
- */
-static boolean shouldEmbedTokenInPackagedConfig(String owner, String repo, String token) {
-    if (!owner?.trim() || !repo?.trim()) {
+        return code == 403 && tokNorm
+    } catch (Exception ignored) {
         return false
     }
-    String o = owner.trim()
-    String r = repo.trim()
-    String meta = "https://api.github.com/repos/${o}/${r}"
-    String tokNorm = token == null ? '' : token.trim().replaceFirst(/(?i)^Bearer\s+/, '')
-    boolean hasTok = !tokNorm.isEmpty()
-    try {
-        return shouldEmbedTokenInPackagedConfigInner(meta, tokNorm, hasTok)
-    } catch (Throwable t) {
-        return false
-    }
-}
-
-static boolean shouldEmbedTokenInPackagedConfigInner(String meta, String tokNorm, boolean hasTok) {
-    java.net.HttpURLConnection c0 = (java.net.HttpURLConnection) new URL(meta).openConnection()
-    c0.setRequestMethod('GET')
-    c0.setRequestProperty('Accept', 'application/vnd.github+json')
-    c0.setRequestProperty('X-GitHub-Api-Version', '2022-11-28')
-    c0.setRequestProperty('User-Agent', 'paragonn-system-gradle-build')
-    int anon = c0.getResponseCode()
-    if (anon == 200) {
-        try {
-            Object body = new groovy.json.JsonSlurper().parse(new java.io.InputStreamReader(c0.getInputStream(), 'UTF-8'))
-            if (body instanceof Map && Boolean.TRUE.equals(((Map) body).get('private'))) {
-                return hasTok
-            }
-            return false
-        } catch (Throwable t) {
-            try {
-                drainHttpConnection(c0)
-            } catch (e) {
-            }
-            return false
-        }
-    }
-    drainHttpConnection(c0)
-    if (anon == 404 && hasTok) {
-        java.net.HttpURLConnection c1 = (java.net.HttpURLConnection) new URL(meta).openConnection()
-        c1.setRequestMethod('GET')
-        c1.setRequestProperty('Accept', 'application/vnd.github+json')
-        c1.setRequestProperty('X-GitHub-Api-Version', '2022-11-28')
-        c1.setRequestProperty('User-Agent', 'paragonn-system-gradle-build')
-        c1.setRequestProperty('Authorization', 'Bearer ' + tokNorm)
-        int auth = c1.getResponseCode()
-        drainHttpConnection(c1)
-        return auth == 200
-    }
-    if (anon == 403 && hasTok) {
-        return true
-    }
-    return false
 }
 
 java {
@@ -276,9 +137,7 @@ repositories {
 }
 
 dependencies {
-    // JARs locais (Spigot/Paper, plugins compileOnly, etc.) — mesmo padrão de ambiente do projeto
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
-    // API JSON do updater (em runtime costuma vir no classpath do servidor)
     compileOnly 'com.googlecode.json-simple:json-simple:1.1.1'
 }
 
@@ -288,55 +147,41 @@ tasks.withType(JavaCompile).configureEach {
 
 sourceSets {
     main {
-        java {
-            srcDirs = ['main/java/src']
-        }
-        resources {
-            srcDirs = ['main/resources']
-        }
+        java { srcDirs = ['main/java/src'] }
+        resources { srcDirs = ['main/resources'] }
     }
 }
 
 processResources {
     filteringCharset = 'UTF-8'
-    def cfgSrc = file('src/main/resources/config.yml')
-    def rawToken = readGithubTokenForPackaging(project)
-    def coords = readUpdaterGithubCoords(cfgSrc)
-    def embed = shouldEmbedTokenInPackagedConfig(coords.owner, coords.repo, rawToken)
-    def tokenForYaml = embed ? rawToken : ''
-    def tokenYaml = toYamlSingleQuotedToken(tokenForYaml)
-    inputs.property('paragonnEmbedGithubToken', String.valueOf(embed))
-    inputs.property('paragonnGithubCoords', "${coords.owner}|${coords.repo}")
-    inputs.property('paragonnHasPackagingToken', String.valueOf(!rawToken.isEmpty()))
-    if (embed) {
-        logger.lifecycle('[paragonn-system] Build: repositorio GitHub privado; token embutido no config.yml do JAR.')
-    } else {
-        logger.lifecycle('[paragonn-system] Build: repositorio publico ou sem token util; campo token vazio no config.yml do JAR.')
-    }
+    def cfgFile = layout.projectDirectory.file('main/resources/config.yml').asFile
+    
+    def rawToken = readGithubToken()
+    def coords = readUpdaterCoords(cfgFile)
+    def embed = shouldEmbedToken(coords.owner, coords.repo, rawToken)
+    def tokenYaml = toYamlToken(embed ? rawToken : '')
+
+    if (embed) logger.lifecycle("[${project.name}] Token GitHub embutido para repo privado.")
+    
     filesMatching('config.yml') {
         filter { line -> line.replace('${githubTokenPackaged}', tokenYaml) }
     }
+    
     filesMatching('plugin.yml') {
-        expand(
-                project: [
-                        artifactId: project.name,
-                        version   : project.version
-                ]
-        )
+        expand(project: [artifactId: project.name, version: project.version])
     }
 }
 
 jar {
-    archiveFileName = 'paragonn-system.jar'
+    archiveFileName = "${project.name}.jar"
 }
 
 tasks.register('deployPlugin', Copy) {
     dependsOn tasks.jar
-    doNotTrackState("Deploy para pasta externa do servidor")
-    from("$buildDir/libs/paragonn-system.jar")
+    from(jar.archiveFile)
     into(file('D:/paragonn.com.br/paragonn-server/plugins'))
 }
 
 tasks.named('build') {
-    finalizedBy(tasks.named('deployPlugin'))
+    finalizedBy('deployPlugin')
 }

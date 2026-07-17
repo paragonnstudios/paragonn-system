@@ -8,16 +8,16 @@ AtivarAddons:
   MassiveFactions: false 
   #-> O Addon do Massive serve para não setar home nas terras dos inimigos
   
-  Core: true
-  #-> Addon do Paragonn Core: tags McTop/Magnata no formato do chat, destaque (system.chat.destaque)
-  #   e cores automáticas na mensagem (integra com o chat interno do core).
+  LegendChat: false
+  #-> Addon do LegendChat: tags McTop/Magnata no formato do chat, destaque (system.chat.destaque)
+  #   e cores automáticas na mensagem (integra com o chat interno do LegendChat).
   
   McMMO: false
   #-> O Addon do McMMO serve para mostra o XP na ActionBar e para anunicar quando upa 100 niveis
-  #   e prefixar a tag McTop no chat (com Core ativo).
+  #   e prefixar a tag McTop no chat (com LegendChat ativo).
   
   Vault: false
-  #-> O Addon do Vault serve para a tag Magnata no chat (com Core ativo).
+  #-> O Addon do Vault serve para a tag Magnata no chat (com LegendChat ativo).
 
 ############################################################
 # +------------------------------------------------------+ #
@@ -270,40 +270,6 @@ Limite-De-Homes-Inicial: 1
 Grupos-De-Permissoes-De-Homes:
    vip: 10
    youtuber: 20
-
-############################################################
-# +------------------------------------------------------+ #
-# |                 Sistemas de Spawners                 | #
-# +------------------------------------------------------+ #
-############################################################
-Sistema-De-Spawners: true
-Bloquear-Trocar-Tipo-Do-Spawner-Com-Ovo: true
-Dropar-Spawner-Ao-Explodir: true
-Chance-De-Dropar-Ao-Explodir: 60
-Nome-Do-Spawner: "&eGerador de Monstros"
-Lore-Do-Spawner:
-   - "&7Tipo: &f%tipo%"
-
-############################################################
-# +------------------------------------------------------+ #
-# |              StackMobs - Agrupador Mobs              | #
-# +------------------------------------------------------+ #
-############################################################
-Sistema-De-Stack-Mobs: true
-Limite-De-Mobs-Agrupados: 100
-Raio-De-Distancia: 16.0
-Nome-Dos-Mobs: "&e%quantia%x %tipo%"
-Kill-All: true
-# Se o Kill-All estiver false os mobs irão morrer 1 por vez.
-
-# Se o Kill-All estiver true todos os mobs serão mortos de uma
-# só vez. Se o player estiver abaixado (segurando shift) os
-# mobs serão mortos 1 por 1. Sem o shift mata todos de uma vez.
-
-# Lista dos tipos mobs que não serão agrupados pelo StkackMobs.
-# Lista de EntityType (entidades) : https://pastebin.com/raw/x0eEJJpw
-Lista-De-Mobs-Que-Nao-Agrupam:
-   - "CREEPER"
 
 ############################################################
 # +------------------------------------------------------+ #

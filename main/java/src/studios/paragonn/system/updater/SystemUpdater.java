@@ -206,6 +206,21 @@ public class SystemUpdater {
 		return ex != null && ex.getMessage() != null && ex.getMessage().contains("401");
 	}
 
+	private static boolean isHttp404FromGithub(IOException ex) {
+		return ex != null && ex.getMessage() != null && ex.getMessage().contains("404");
+	}
+
+	private boolean hasGithubTokenForRetry() {
+		return this.githubToken != null && !this.githubToken.trim().isEmpty();
+	}
+
+	private void forceGithubAuthorizationOn() {
+		synchronized (this) {
+			this.githubApiAuthResolved = true;
+			this.githubApiUseAuthorization = true;
+		}
+	}
+
 	private void disableGithubAuthorizationAfter401() {
 		synchronized (this) {
 			this.githubApiAuthResolved = true;
@@ -337,21 +352,31 @@ public class SystemUpdater {
 		String repo = this.githubRepo.trim();
 		ensureGithubApiAuthMode(owner, repo);
 		String listUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/releases?per_page=50";
+		logInfo("Consultando releases: " + listUrl + " (Authorization=" + this.githubApiUseAuthorization + ").");
 
 		JSONArray releases;
 		boolean retried401List = false;
+		boolean retried404WithToken = false;
 		while (true) {
 			try {
 				releases = requestJsonArray(listUrl);
 				break;
 			} catch (IOException ex) {
+				if (!retried404WithToken && !this.githubApiUseAuthorization && isHttp404FromGithub(ex) && hasGithubTokenForRetry()) {
+					logInfo("Lista retornou HTTP 404 sem token; a repetir com Authorization.");
+					forceGithubAuthorizationOn();
+					retried404WithToken = true;
+					continue;
+				}
 				if (!retried401List && this.githubApiUseAuthorization && isHttp401FromGithub(ex)) {
 					logWarning("HTTP 401 com Authorization; a repetir lista de releases sem token.");
 					disableGithubAuthorizationAfter401();
 					retried401List = true;
 					continue;
 				}
-				logInfo("Lista de releases falhou (" + ex.getMessage() + "); tentando /releases/latest.");
+				logWarning("Lista de releases falhou em " + listUrl + " (" + ex.getMessage() + "). Confirme owner/repo em plugins/"
+						+ this.plugin.getName() + "/config.yml e PARAGONN_GITHUB_TOKEN se o repo for privado.");
+				logInfo("A tentar /releases/latest como fallback.");
 				loadLatestReleaseFromLatestEndpoint(owner, repo);
 				return;
 			}
@@ -436,6 +461,7 @@ public class SystemUpdater {
 	private void loadLatestReleaseFromLatestEndpoint(String owner, String repo) throws IOException {
 		String url = "https://api.github.com/repos/" + owner + "/" + repo + "/releases/latest";
 		boolean retried401 = false;
+		boolean retried404WithToken = false;
 		while (true) {
 			try {
 				JSONObject release = requestJson(url);
@@ -446,6 +472,12 @@ public class SystemUpdater {
 				this.downloadUrl = findAssetDownloadUrl((JSONArray) release.get("assets"), this.githubAssetName);
 				return;
 			} catch (IOException ex) {
+				if (!retried404WithToken && !this.githubApiUseAuthorization && isHttp404FromGithub(ex) && hasGithubTokenForRetry()) {
+					logInfo("/releases/latest retornou HTTP 404 sem token; a repetir com Authorization.");
+					forceGithubAuthorizationOn();
+					retried404WithToken = true;
+					continue;
+				}
 				if (!retried401 && this.githubApiUseAuthorization && isHttp401FromGithub(ex)) {
 					logWarning("HTTP 401 em /releases/latest; a repetir sem token.");
 					disableGithubAuthorizationAfter401();
@@ -639,7 +671,8 @@ public class SystemUpdater {
 
 			if (asyncError != null) {
 				if (this.lastHttpCode == 404) {
-					logInfo("Nenhuma release publicada no GitHub ainda (HTTP 404). Publique uma release para habilitar updates.");
+					logInfo("GitHub HTTP 404 (repo inacessivel, owner/repo errados, ou so releases em rascunho — /releases/latest nao lista drafts). Confirme plugins/"
+							+ this.plugin.getName() + "/config.yml e PARAGONN_GITHUB_TOKEN se for privado.");
 					return;
 				}
 				if (this.lastHttpCode == 401 || this.lastHttpCode == 403) {

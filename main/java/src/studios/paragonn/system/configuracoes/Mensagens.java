@@ -336,6 +336,7 @@ public class Mensagens {
 	public static String Erro_Nome_Com_Caracteres_Especiais;
 	public static String Aguarde_Cooldown_Comandos;
 	public static String Aguarde_Delay_Comandos;
+	public static String Teleporte_Cancelado_Movimento;
 
 	public static void loadMensagens() {
 		FileConfiguration config = ConfigManager.getConfig("mensagens");
@@ -670,6 +671,7 @@ public class Mensagens {
 		Erro_Nome_Com_Caracteres_Especiais = getString(config, "Erro-Nome-Com-Caracteres-Especiais");
 		Aguarde_Cooldown_Comandos = getString(config, "Aguarde-Cooldown-Comandos");
 		Aguarde_Delay_Comandos = getString(config, "Aguarde-Delay-Comandos");
+		Teleporte_Cancelado_Movimento = getString(config, "Teleporte-Cancelado-Movimento");
 	}
 	
 	private static String getString(FileConfiguration config, String path) {

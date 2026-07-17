@@ -6,12 +6,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import studios.paragonn.system.Main;
 import studios.paragonn.system.configuracoes.Locations;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 @SuppressWarnings("all")
 public class ComandoMundoVip implements CommandExecutor {
@@ -57,16 +56,12 @@ public class ComandoMundoVip implements CommandExecutor {
 			// Verificando se o camarote para os sem vip esta habilitado e teleportando o palyer
 			if (Settings.Ativar_Camarote_Para_Os_Sem_Vip) {
 				s.sendMessage(Mensagens.Iniciando_Teleporte_Vip);
-				new BukkitRunnable() {
-					@Override
-					public void run() {
+				TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 						p.teleport(Locations.areaNaoVip, TeleportCause.COMMAND);
 						s.sendMessage("§f ");
 						s.sendMessage(Mensagens.Teleportado_Com_Sucesso_Sem_Vip);
 						s.sendMessage("§f ");
-
-					}
-				}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+				});
 				return true;
 			}
 

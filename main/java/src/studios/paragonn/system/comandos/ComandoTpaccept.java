@@ -8,12 +8,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import studios.paragonn.system.Main;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
 import studios.paragonn.system.entidades.Tpa;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 @SuppressWarnings("all")
 public class ComandoTpaccept extends Tpa implements CommandExecutor {
@@ -67,23 +66,20 @@ public class ComandoTpaccept extends Tpa implements CommandExecutor {
 			// Verificando se o player possui permissão para se teleportar sem delay
 			if (!p.hasPermission("system.semdelay")) {
 				p.sendMessage(Mensagens.Tpaccept_Iniciando_Teleporte.replace("%player%", s.getName()));
-				new BukkitRunnable() {
-					@Override
-					public void run() {
+				TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 						// Teleportando e informando
 						p.teleport(target, TeleportCause.COMMAND);
 						p.sendMessage(Mensagens.Tpaccept_Teleportado_Com_sucesso.replace("%player%", s.getName()));
-					}
-				}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+				});
 				return true;
 			}
-			
+
 			// Caso o player possui a permissão para se teleportar sem delay o código acima é ignorado
 			p.teleport(target, TeleportCause.COMMAND);
 			p.sendMessage(Mensagens.Tpaccept_Teleportado_Com_sucesso.replace("%player%", s.getName()));
 			return true;
 		}
-		
+
 		// Caso o player informe um argumento então significa que ele quer aceitar um TPA especifico
 		if (args.length == 1) {
 			
@@ -117,14 +113,11 @@ public class ComandoTpaccept extends Tpa implements CommandExecutor {
 			// Verificando se o player possui permissão para se teleportar sem delay
 			if (!p.hasPermission("system.semdelay")) {
 				p.sendMessage(Mensagens.Tpaccept_Iniciando_Teleporte.replace("%player%", s.getName()));
-				new BukkitRunnable() {
-					@Override
-					public void run() {
+				TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 						// Teleportando e informando
 						p.teleport(target, TeleportCause.COMMAND);
-						p.sendMessage(Mensagens.Tpaccept_Teleportado_Com_sucesso.replace("%player%", s.getName()));	
-					}
-				}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+						p.sendMessage(Mensagens.Tpaccept_Teleportado_Com_sucesso.replace("%player%", s.getName()));
+				});
 				return true;
 			}
 			

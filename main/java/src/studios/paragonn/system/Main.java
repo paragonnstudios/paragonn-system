@@ -9,11 +9,12 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import studios.paragonn.system.addons.LegendChat;
 import studios.paragonn.system.addons.Mcmmo;
 import studios.paragonn.system.addons.ParagonnCoreChat;
 import studios.paragonn.system.addons.Vault;
-import studios.paragonn.system.addons.corechat.MagnataTag;
-import studios.paragonn.system.addons.corechat.McTopTag;
+import studios.paragonn.system.addons.legendchat.MagnataTag;
+import studios.paragonn.system.addons.legendchat.McTopTag;
 import studios.paragonn.system.apis.APIS;
 import studios.paragonn.system.comandos.ComandoAlerta;
 import studios.paragonn.system.comandos.ComandoAlertaOLD;
@@ -62,7 +63,6 @@ import studios.paragonn.system.comandos.ComandoPotion;
 import studios.paragonn.system.comandos.ComandoPublica;
 import studios.paragonn.system.comandos.ComandoRenderizacao;
 import studios.paragonn.system.comandos.ComandoReparar;
-import studios.paragonn.system.comandos.ComandoSGive;
 import studios.paragonn.system.comandos.ComandoSethome;
 import studios.paragonn.system.comandos.ComandoSetmundovip;
 import studios.paragonn.system.comandos.ComandoSetspawn;
@@ -165,14 +165,8 @@ import studios.paragonn.system.sistemas.gerais.Motd;
 import studios.paragonn.system.sistemas.gerais.PlayerData;
 import studios.paragonn.system.sistemas.gerais.ScoreBoard;
 import studios.paragonn.system.sistemas.gerais.ScoreBoardOLD;
-import studios.paragonn.system.sistemas.gerais.StackMobs;
 import studios.paragonn.system.sistemas.gerais.Tablist;
-import studios.paragonn.system.sistemas.spawners.BloquearTrocarTipoDoSpawnerComOvo;
-import studios.paragonn.system.sistemas.spawners.DroparSpawnerAoExplodir;
-import studios.paragonn.system.sistemas.spawners.DroparSpawnerAoExplodirOLD;
-import studios.paragonn.system.sistemas.spawners.SistemaDeSpawners;
-import studios.paragonn.system.sistemas.spawners.SistemaDeSpawnersOLD;
-import studios.paragonn.system.sistemas.spawners.SpawnerStackManager;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 import studios.paragonn.system.utils.ReflectionUtils;
 import studios.paragonn.system.utils.manager.ConfigManager;
 import studios.paragonn.system.utils.manager.DataManager;
@@ -230,7 +224,6 @@ public class Main extends JavaPlugin {
 		Settings.loadSettings();
 		Mensagens.loadMensagens();
 		Locations.loadLocations();
-		studios.paragonn.system.sistemas.spawners.SpawnerStackManager.load();
 	}
 
 	private void registrarComandos() {
@@ -326,10 +319,6 @@ public class Main extends JavaPlugin {
 			new Command("estatisticas", "system.estatisticas", new ComandoEstatisticas());
 		} else {
 			notificarQueEsteRecursoNaoEstaDisponivelNestaVersao("Comando /estatisticas (nao disponivel nas versoes 1.5 e 1.6)");
-		}
-		
-		if (!isVeryNewVersion()) {
-			new Command("sgive", "system.sgive", new ComandoSGive());
 		}
 		
 		if (!isVeryFuckingNewVersion()) {
@@ -617,6 +606,8 @@ public class Main extends JavaPlugin {
 			pm.registerEvents(new InvencibilidadeAoTeleportar(), this);
 		}
 
+		pm.registerEvents(new TeleportDelayManager(), this);
+
 		if (Settings.Limitador_De_Players) {
 			if (!isOldVersion()) {
 				pm.registerEvents(new LimiteDePlayers(), this);
@@ -649,36 +640,6 @@ public class Main extends JavaPlugin {
 			}
 		}
 		
-		if (Settings.Sistema_De_Stack_Mobs) {
-			pm.registerEvents(new StackMobs(), this);
-		}
-
-		if (Settings.Sistema_De_Spawners) {
-			if (commands.getBoolean("comandos.sgive.ativar-comando")) {
-				if (!isVeryNewVersion()) {
-					
-					if (Settings.Bloquear_Trocar_Tipo_Do_Spawner_Com_Ovo) {
-						pm.registerEvents(new BloquearTrocarTipoDoSpawnerComOvo(), this);
-					}
-					
-					pm.registerEvents(new SpawnerStackManager(), this);
-					
-					if (isOldVersion()) {
-						pm.registerEvents(new SistemaDeSpawnersOLD(), this);
-						if (Settings.Dropar_Spawner_Ao_Explodir) {
-							pm.registerEvents(new DroparSpawnerAoExplodirOLD(), this);
-						}
-					} else {
-						pm.registerEvents(new SistemaDeSpawners(), this);
-						if (Settings.Dropar_Spawner_Ao_Explodir) {
-							pm.registerEvents(new DroparSpawnerAoExplodir(), this);
-						}
-					}
-				} else {
-					notificarQueEsteRecursoNaoEstaDisponivelNestaVersao("Sistema de Spawners (nao disponivel nas versoes 1.13, 1.14, 1.15, 1.16, 1.17 e nas versoes acima da 1.17)");
-				}
-			}
-		}
 
 		if (Settings.Title_De_Boas_Vindas_Ativar) {
 			if (!isOldVersion()) {
@@ -696,27 +657,17 @@ public class Main extends JavaPlugin {
 			}
 		}
 
-		if (Settings.AtivarAddons_Core) {
-			if (pm.getPlugin("paragonn-core") == null) {
-				getServer().getConsoleSender().sendMessage("§c[System] Paragonn Core nao encontrado, desativando addon de chat do core!");
+		if (Settings.AtivarAddons_Legendchat) {
+			if (pm.getPlugin("LegendChat") == null) {
+				getServer().getConsoleSender().sendMessage("§c[System] LegendChat nao encontrado, desativando addon de chat do LegendChat!");
 			} else {
-				pm.registerEvents(new ParagonnCoreChat(), this);
+				pm.registerEvents(new LegendChat(), this);
+				pm.registerEvents(new McTopTag(), this);
+				McTopTag.checkMCTop();	
+				pm.registerEvents(new MagnataTag(), this);
+				MagnataTag.checkMagnata();
 			}
-		}
-
-		if (Settings.AtivarAddons_McMMO) {
-			if (!isOldVersion()) {
-				if (pm.getPlugin("mcMMO") == null) {
-					getServer().getConsoleSender().sendMessage("§c[System] McMMO nao encontrado, desativando addons!");
-				} else {
-					pm.registerEvents(new Mcmmo(), this);
-					if (Settings.AtivarAddons_Core && pm.getPlugin("paragonn-core") != null) {
-						pm.registerEvents(new McTopTag(), this);
-						McTopTag.checkMCTop();
-					}
-				}
-			}
-		}
+		}	
 
 		if (Settings.AtivarAddons_MassiveFactions) {
 			if (pm.getPlugin("MassiveCore") == null || pm.getPlugin("Factions") == null) {
@@ -731,10 +682,8 @@ public class Main extends JavaPlugin {
 				getServer().getConsoleSender().sendMessage("§c[System] Vault nao encontrado, desativando addons!");
 			} else {
 				if (Vault.setupEconomy()) {
-					if (Settings.AtivarAddons_Core && pm.getPlugin("paragonn-core") != null) {
-						pm.registerEvents(new MagnataTag(), this);
-						MagnataTag.checkMagnata();
-					}
+					pm.registerEvents(new MagnataTag(), this);
+					MagnataTag.checkMagnata();
 				} else {
 					getServer().getConsoleSender().sendMessage("§c[System] Nenhum plugin valido de economia encontrado!");
 				}
@@ -852,7 +801,6 @@ public class Main extends JavaPlugin {
 			SystemUpdater.UPDATER = null;
 			SystemUpdater.resetGithubUpdateCheckLock();
 
-			studios.paragonn.system.sistemas.spawners.SpawnerStackManager.save();
 			HandlerList.unregisterAll(this);
 			Bukkit.getScheduler().cancelTasks(this);
 	

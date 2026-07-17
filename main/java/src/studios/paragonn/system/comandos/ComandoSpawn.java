@@ -6,12 +6,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import studios.paragonn.system.Main;
 import studios.paragonn.system.configuracoes.Locations;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 @SuppressWarnings("all")
 public class ComandoSpawn implements CommandExecutor {
@@ -66,13 +65,10 @@ public class ComandoSpawn implements CommandExecutor {
 		Player p = (Player) s;
 		if (!s.hasPermission("system.semdelay")) {
 			s.sendMessage(Mensagens.Iniciando_Teleporte_Spawn);
-			new BukkitRunnable() {
-				@Override
-				public void run() {
+			TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 					p.teleport(Locations.spawn, TeleportCause.COMMAND);
 					s.sendMessage(Mensagens.Teleportado_Com_Sucesso_Spawn);
-				}
-			}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+			});
 			return true;
 		}
 

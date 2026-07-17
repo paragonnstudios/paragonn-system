@@ -39,6 +39,7 @@ Placas:
   Palavra-Bloqueada-Na-Placa: "&cA palavra '%palavra%' foi bloqueada de ser usada em placas."
 Aguarde-Cooldown-Comandos: "&cAguarde %tempo% para poder usar este comando novamente."
 Aguarde-Delay-Comandos: "&eExecutando comando %comando% em %tempo%."
+Teleporte-Cancelado-Movimento: "&cTeleporte cancelado! Você se moveu."
 
 ############################################################
 # +------------------------------------------------------+ #

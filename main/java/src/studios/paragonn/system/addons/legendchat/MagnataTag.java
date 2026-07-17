@@ -1,14 +1,13 @@
-package studios.paragonn.system.addons.corechat;
+package studios.paragonn.system.addons.legendchat;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import br.com.devpaulo.legendchat.api.events.ChatMessageEvent;
 import studios.paragonn.system.Main;
 import studios.paragonn.system.addons.Vault;
 import studios.paragonn.system.configuracoes.Settings;
@@ -20,10 +19,10 @@ public class MagnataTag implements Listener {
 	private static String playerMagnata = "";
 	private static double balanceMagnata = 0;
 
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void aoEnviarMensagem(AsyncPlayerChatEvent e) {
-		if (e.getPlayer().getName().equals(playerMagnata)) {
-			e.setFormat(Settings.magnataTag_Tag + e.getFormat());
+	@EventHandler(ignoreCancelled = true)
+	public void aoEnviarMenssagem(ChatMessageEvent e) {
+		if (e.getSender().getName().equals(playerMagnata) && e.getTags().contains("magnata")) {
+			e.setTagValue("magnata", Settings.magnataTag_Tag);
 		}
 	}
 
@@ -41,4 +40,5 @@ public class MagnataTag implements Listener {
 			}
 		}.runTaskTimerAsynchronously(Main.get(), 60L, Settings.magnataTag_Tempo_De_Checagem * 20L);
 	}
+
 }

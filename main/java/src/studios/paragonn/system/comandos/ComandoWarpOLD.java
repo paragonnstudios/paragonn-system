@@ -7,13 +7,12 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import studios.paragonn.system.Main;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
 import studios.paragonn.system.entidades.Warp;
 import studios.paragonn.system.entidades.Warps;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 
 @SuppressWarnings("all")
 public class ComandoWarpOLD implements CommandExecutor {
@@ -88,15 +87,12 @@ public class ComandoWarpOLD implements CommandExecutor {
 			if (w.enviarMensagem() && w.getDelay() > 0 && w.getMensagemInicio() != null && !w.getMensagemInicio().isEmpty()) {
 				s.sendMessage(w.getMensagemInicio());
 			}
-			new BukkitRunnable() {
-				@Override
-				public void run() {
+			TeleportDelayManager.iniciar(p, w.getDelay(), () -> {
 					if (w.enviarMensagem() && w.getMensagemFinal() != null && !w.getMensagemFinal().isEmpty()) {
 						s.sendMessage(w.getMensagemFinal());
 					}
 					p.teleport(location, TeleportCause.COMMAND);
-				}
-			}.runTaskLater(Main.get(), 20L * w.getDelay());
+			});
 			return true;
 		}
 			    	

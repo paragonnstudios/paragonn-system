@@ -10,12 +10,12 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import studios.paragonn.system.Main;
 import studios.paragonn.system.addons.MassiveFactions;
 import studios.paragonn.system.configuracoes.Mensagens;
 import studios.paragonn.system.configuracoes.Settings;
+import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 import studios.paragonn.system.utils.Utils;
 import studios.paragonn.system.utils.manager.DataManager;
 
@@ -95,13 +95,10 @@ public class ComandoHome implements CommandExecutor {
 		    // Teleportando o player para a home
 	    	if (!s.hasPermission("system.semdelay")) {
 	        	s.sendMessage(Mensagens.Home_Publica_Iniciando_Teleporte.replace("%home%", homeSplit[1]).replace("%player%", player));
-	    		new BukkitRunnable() {
-	    			@Override
-	    			public void run() {
+	    		TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
 	    				s.sendMessage(Mensagens.Home_Publica_Teleportado_Sucesso.replace("%home%", homeSplit[1]).replace("%player%", player));
-	    				p.teleport(location, TeleportCause.COMMAND);		
-	    			}
-	    		}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+	    				p.teleport(location, TeleportCause.COMMAND);
+	    		});
 				return true;
 	    	}
 		    	
@@ -140,13 +137,10 @@ public class ComandoHome implements CommandExecutor {
 	   	// Verificando se ele tem permissão para se teleportar sem precisar esperar delay
 	   	if (!s.hasPermission("system.semdelay")) {
 	   		s.sendMessage(Mensagens.Home_Privada_Iniciando_Teleporte.replace("%home%", home));
-	   		new BukkitRunnable() {
-	   			@Override
-	   			public void run() {
-	   				p.teleport(location, TeleportCause.COMMAND);	
+	   		TeleportDelayManager.iniciar(p, Settings.Delay_Para_Teleportar_Comandos, () -> {
+	   				p.teleport(location, TeleportCause.COMMAND);
 	   				s.sendMessage(Mensagens.Home_Privada_Teleportado_Sucesso.replace("%home%", home));
-	   			}
-	   		}.runTaskLater(Main.get(), 20L * Settings.Delay_Para_Teleportar_Comandos);
+	   		});
 			return true;
 	   	}
 		    	

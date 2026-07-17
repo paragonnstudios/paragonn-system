@@ -288,12 +288,6 @@ comandos:
     descricao: "Define uma warp."
     sem-permissao: "&cVocê não tem permissão para utilizar este comando."
     
-  sgive:
-    ativar-comando: true
-    aliases: [spawnergive, spawner]
-    descricao: "Envia geradores para um player."
-    sem-permissao: "&cVocê não tem permissão para utilizar este comando."
-    
   skull:
     ativar-comando: true
     aliases: [head, cabeca]

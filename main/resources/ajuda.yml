@@ -149,7 +149,6 @@
 #    | system.setmundovip        - Permissão para utilizar o comando /setmundovip                  |
 #    | system.setspawn           - Permissão para utilizar o comando /setspawn                     |
 #    | system.setwarp            - Permissão para utilizar o comando /setwarp                      |
-#    | system.sgive              - Permissão para utilizar o comando /sgive                        |
 #    | system.skull              - Permissão para utilizar o comando /skull                        |
 #    | system.slime              - Permissão para utilizar o comando /slime                        |
 #    | system.spawn              - Permissão para utilizar o comando /spawn                        |

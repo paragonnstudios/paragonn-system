@@ -217,9 +217,6 @@ permissions:
   system.setwarp:
     description: Permissão para definir uma warp.
     default: op
-  system.sgive:
-    description: Permissão para ver o seu ping ou o ping de outro player.
-    default: op
   system.slime:
     description: Permissão para verificar se você esta em uma slimechunk.
     default: op
