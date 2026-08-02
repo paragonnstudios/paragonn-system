@@ -161,14 +161,14 @@ public class ComandoSystem implements CommandExecutor {
 				
 			// Criando a mensagem JSON com a lista de comandos
 			UltimateFancy msg = new UltimateFancy();
-			s.sendMessage("§e§lLista de comandos do §nSystem§e: ");
+			s.sendMessage("§a§lComandos disponíveis:");
 			for (int i = inicio; i < fim && i < cmds.length; i++) {
 				String description = config.getString("comandos." + cmds[i] + ".descricao");
 				String permission = "system." + cmds[i];
 				String sempermission = config.getString("comandos." + cmds[i] + ".sem-permissao").replace('&', '§');
 				String aliases = config.getStringList("comandos." + cmds[i] + ".aliases").toString();
 				boolean enabled = config.getBoolean("comandos." + cmds[i] + ".ativar-comando");
-				msg.text("§b/" + cmds[i] + " §7-§f " + description + "\n");
+				msg.text("§a/" + cmds[i] + " §f- §7" + description + "\n");
 				msg.hoverShowText(
 						"§eComando: §f/" + cmds[i] +
 						"\n§eComando ativado: §f" + enabled +
