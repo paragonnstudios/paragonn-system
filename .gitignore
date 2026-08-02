@@ -26,8 +26,5 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Token GitHub só para build local (empacotado no JAR pelo processResources, ver build.gradle)
-github.token
-
 # Compilados soltos
 *.class

@@ -1,10 +1,7 @@
 package studios.paragonn.system;
 
-import java.io.File;
-
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -170,8 +167,6 @@ import studios.paragonn.system.sistemas.gerais.TeleportDelayManager;
 import studios.paragonn.system.utils.ReflectionUtils;
 import studios.paragonn.system.utils.manager.ConfigManager;
 import studios.paragonn.system.utils.manager.DataManager;
-import studios.paragonn.system.updater.SystemUpdater;
-import studios.paragonn.system.updater.UpdaterJoinListener;
 
 public class Main extends JavaPlugin {
 
@@ -179,8 +174,6 @@ public class Main extends JavaPlugin {
 	private static Version version;
 	private static JarType jarType;
 	public static boolean setupFactions;
-	/** Uma vez true, a busca de update no GitHub já foi disparada nesta sessão. */
-	private boolean updaterCheckStarted;
 
 	@Override
 	public void onEnable() {
@@ -189,7 +182,6 @@ public class Main extends JavaPlugin {
 		carregarConfigs();
 		registrarEventos();
 		registrarComandos();
-		cleanupUpdaterArtifactsAfterStartup();
 	}
 
 	@Override
@@ -201,7 +193,6 @@ public class Main extends JavaPlugin {
 		main = this;
 		version = Version.getServerVersion();
 		jarType = JarType.getJarType();
-		SystemUpdater.resetGithubUpdateCheckLock();
 		ReflectionUtils.loadUtils();
 		APIS.load();
 	}
@@ -717,90 +708,14 @@ public class Main extends JavaPlugin {
 		pm.registerEvents(new PlayerData(), this);
 		pm.registerEvents(new ManterXpAoMorrer(), this);
 		pm.registerEvents(new Outros(), this);
-
-		File updaterConfigFile = new File(getDataFolder(), "config.yml");
-		if (updaterConfigFile.exists()) {
-			FileConfiguration updaterCfg = YamlConfiguration.loadConfiguration(updaterConfigFile);
-			if (updaterCfg.getBoolean("updater.check-on-first-admin-join", true)) {
-				pm.registerEvents(new UpdaterJoinListener(), this);
-			}
-		}
 	}
 
-	/**
-	 * Dispara no máximo uma vez por ativação do plugin a verificação de updates no GitHub,
-	 * na primeira vez que um jogador com {@link SystemUpdater#UPDATER_PERMISSION} entra.
-	 */
-	public void scheduleUpdaterWhenFirstAdminJoins() {
-		if (!this.isEnabled() || this.updaterCheckStarted) {
-			return;
-		}
-		this.updaterCheckStarted = true;
-		Bukkit.getScheduler().runTask(this, () -> {
-			if (this.isEnabled()) {
-				new SystemUpdater(this, 0).run();
-			}
-		});
-	}
-
-	/**
-	 * Remove pasta legada {@code plugins/paragonn-system/update} e jars deste plugin na pasta global de update do Spigot.
-	 */
-	private void cleanupUpdaterArtifactsAfterStartup() {
-		File legacyUpdateDir = new File(getDataFolder(), "update");
-		if (legacyUpdateDir.exists()) {
-			deleteRecursivelyQuiet(legacyUpdateDir);
-		}
-
-		File spigotUpdateDir = Bukkit.getUpdateFolderFile();
-		if (!spigotUpdateDir.exists() || !spigotUpdateDir.isDirectory()) {
-			return;
-		}
-
-		File pluginUpdateJar = new File(spigotUpdateDir, getPluginJarFilename());
-		File pluginPartialJar = new File(spigotUpdateDir, getPluginJarFilename() + ".part");
-		if (pluginUpdateJar.exists()) {
-			//noinspection ResultOfMethodCallIgnored
-			pluginUpdateJar.delete();
-		}
-		if (pluginPartialJar.exists()) {
-			//noinspection ResultOfMethodCallIgnored
-			pluginPartialJar.delete();
-		}
-
-		File[] remaining = spigotUpdateDir.listFiles();
-		if (remaining != null && remaining.length == 0) {
-			//noinspection ResultOfMethodCallIgnored
-			spigotUpdateDir.delete();
-		}
-	}
-
-	private static void deleteRecursivelyQuiet(File root) {
-		if (root == null || !root.exists()) {
-			return;
-		}
-		if (root.isDirectory()) {
-			File[] children = root.listFiles();
-			if (children != null) {
-				for (File c : children) {
-					deleteRecursivelyQuiet(c);
-				}
-			}
-		}
-		//noinspection ResultOfMethodCallIgnored
-		root.delete();
-	}
-	
 	private void notificarQueEsteRecursoNaoEstaDisponivelNestaVersao(String mensagem) {
 		getServer().getConsoleSender().sendMessage("§c[System] " + mensagem);
 	}
 
 	private void disablePlugin() {
 		try {
-			this.updaterCheckStarted = false;
-			SystemUpdater.UPDATER = null;
-			SystemUpdater.resetGithubUpdateCheckLock();
-
 			HandlerList.unregisterAll(this);
 			Bukkit.getScheduler().cancelTasks(this);
 	
@@ -974,11 +889,6 @@ public class Main extends JavaPlugin {
 
 	public static Main get() {
 		return main;
-	}
-
-	/** Nome do jar na pasta {@code plugins/} (pasta {@code update} do Spigot usa o mesmo nome). */
-	public String getPluginJarFilename() {
-		return getFile().getName();
 	}
 
 }

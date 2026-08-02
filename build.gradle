@@ -37,92 +37,6 @@ def resolveProjectVersion() {
 group = 'studios.paragonn'
 version = resolveProjectVersion()
 
-// --- Lógica de Token GitHub ---
-def readGithubToken() {
-    def token = providers.gradleProperty('githubToken')
-            .orElse(providers.environmentVariable('PARAGONN_GITHUB_TOKEN'))
-            .orNull
-    if (token) return token.trim()
-
-    def dotEnv = layout.projectDirectory.file('.env').asFile
-    if (dotEnv.exists()) {
-        def match = dotEnv.readLines().find { it.trim().startsWith('PARAGONN_GITHUB_TOKEN=') }
-        if (match) {
-            def val = match.split('=', 2)[1].trim()
-            return val.replaceAll(/^["']|["']$/, '')
-        }
-    }
-    return ''
-}
-
-def toYamlToken(raw) {
-    if (!raw) return "''"
-    return "'" + raw.replace("'", "''") + "'"
-}
-
-def readUpdaterCoords(configFile) {
-    def coords = [owner: '', repo: '']
-    if (!configFile || !configFile.exists()) return coords
-    
-    boolean inGithub = false
-    int githubIndent = -1
-    
-    configFile.eachLine { rawLine ->
-        def line = rawLine.replaceFirst(/\s+$/, '')
-        if (!line || line.trim().startsWith('#')) return
-        
-        int indent = rawLine.takeWhile { it == ' ' || it == '\t' }.length()
-        def trimmed = line.trim()
-        
-        if (trimmed.startsWith('github:')) {
-            inGithub = true
-            githubIndent = indent
-        } else if (inGithub) {
-            if (indent <= githubIndent) {
-                inGithub = false
-            } else if (trimmed.startsWith('owner:')) {
-                coords.owner = extractYamlValue(trimmed)
-            } else if (trimmed.startsWith('repo:')) {
-                coords.repo = extractYamlValue(trimmed)
-            }
-        }
-    }
-    return coords
-}
-
-def extractYamlValue(line) {
-    def parts = line.split(':', 2)
-    if (parts.length < 2) return ''
-    def v = parts[1].trim()
-    return v.replaceAll(/^["']|["']$/, '')
-}
-
-boolean shouldEmbedToken(owner, repo, token) {
-    if (!owner || !repo) return false
-    def meta = "https://api.github.com/repos/${owner}/${repo}"
-    def tokNorm = token?.replaceFirst(/(?i)^Bearer\s+/, '')
-    
-    try {
-        def conn = new java.net.URL(meta).openConnection()
-        conn.setRequestProperty('User-Agent', 'paragonn-build')
-        int code = conn.responseCode
-        if (code == 200) {
-            def body = conn.inputStream.text
-            // Verifica se o repositório é privado sem precisar de um parser JSON
-            return body.contains('"private":true') && tokNorm
-        }
-        if (code == 404 && tokNorm) {
-            def connAuth = new java.net.URL(meta).openConnection()
-            connAuth.setRequestProperty('Authorization', "Bearer ${tokNorm}")
-            connAuth.setRequestProperty('User-Agent', 'paragonn-build')
-            return connAuth.responseCode == 200
-        }
-        return code == 403 && tokNorm
-    } catch (Exception ignored) {
-        return false
-    }
-}
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(8)
@@ -154,19 +68,7 @@ sourceSets {
 
 processResources {
     filteringCharset = 'UTF-8'
-    def cfgFile = layout.projectDirectory.file('main/resources/config.yml').asFile
-    
-    def rawToken = readGithubToken()
-    def coords = readUpdaterCoords(cfgFile)
-    def embed = shouldEmbedToken(coords.owner, coords.repo, rawToken)
-    def tokenYaml = toYamlToken(embed ? rawToken : '')
 
-    if (embed) logger.lifecycle("[${project.name}] Token GitHub embutido para repo privado.")
-    
-    filesMatching('config.yml') {
-        filter { line -> line.replace('${githubTokenPackaged}', tokenYaml) }
-    }
-    
     filesMatching('plugin.yml') {
         expand(project: [artifactId: project.name, version: project.version])
     }
