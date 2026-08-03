@@ -34,11 +34,16 @@ public class DeletarComandos {
 					Map<String, Command> commands = (Map<String, Command>) commandsField.get(commandMap);
 					Set<Entry<String, Command>> removes = new HashSet<>();
 					
-					for (String line : Settings.Lista_Dos_Comandos_Deletados) 
-					{	
-						String plugin  = line.split(":")[0].toLowerCase().trim();
-						String command = line.split(":")[1].toLowerCase().trim();
-						
+					for (String line : Settings.Lista_Dos_Comandos_Deletados)
+					{
+						String[] partes = line.split(":", 2);
+						if (partes.length < 2) {
+							Bukkit.getLogger().warning("[paragonn-system] Entrada invalida em Lista_Dos_Comandos_Deletados (esperado 'plugin:comando'): " + line);
+							continue;
+						}
+						String plugin  = partes[0].toLowerCase().trim();
+						String command = partes[1].toLowerCase().trim();
+
 						if (command.equals("*")) {
 							for (Entry<String, Command> entry : commands.entrySet()) {
 								if (entry.getKey().contains(":") && entry.getKey().toLowerCase().split(":")[0].equals(plugin)) {
